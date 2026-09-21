@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CNN 与图像识别中文在线笔记：卷积神经网络。">
+  <title>卷积神经网络 · CNN 与图像识别</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳转至正文</a>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="返回本讲开头">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span>CNN 与图像识别<small>CNNS &amp; IMAGE RECOGNITION</small></span>
+    </a>
+    <nav class="header-nav" aria-label="网站导航">
+      <a class="current" href="#main-content">课程讲义</a>
+      <a href="#summary">本节总结</a>
+      <span class="institution">上海交通大学 · 2026</span>
+    </nav>
+  </header>
+
+  <aside class="course-sidebar" id="course-sidebar" aria-label="课程目录">
+    <div class="sidebar-heading">课程目录 <span>共 3 节</span></div>
+    <a class="overview-link" href="#top"><span aria-hidden="true">▦</span> 本讲概览</a>
+    <div class="nav-part">
+      <p>第一部分 <span>建立 CNN 基础</span></p>
+      <a class="lesson-link active" href="#main-content" aria-current="page">
+        <span class="lesson-number">01</span><span>卷积神经网络</span><i></i>
+      </a>
+      <span class="lesson-link disabled"><span class="lesson-number">02</span><span>训练卷积网络</span></span>
+      <span class="lesson-link disabled"><span class="lesson-number">03</span><span>经典 CNN 架构</span></span>
+    </div>
+    <div class="sidebar-source">
+      <span>本节结构</span>
+      <strong>8 个主题 · 3 个交互模块</strong>
+      <small>从局部连接到完整分类网络</small>
+    </div>
+    <div class="sidebar-footer"><i></i> 中文在线笔记 <span>预览版</span></div>
+  </aside>
+
+  <div class="site-body" id="top">
+    <div class="breadcrumb">
+      <button class="icon-button mobile-menu" id="mobile-menu" aria-label="打开课程目录" aria-expanded="false">☰</button>
+      <div><a href="#top">课程讲义</a><span>›</span><span>第 01 节</span></div>
+      <span class="breadcrumb-note">中文讲义 · 交互讲解</span>
+    </div>
+
+    <div class="lecture-toolbar">
+      <div class="lecture-location"><span>SECTION 01</span><span>建立 CNN 基础</span></div>
+      <div class="mode-switch" aria-label="讲义显示模式">
+        <button class="active" data-mode="reading">阅读</button>
+        <button data-mode="demo">演示</button>
+      </div>
+    </div>
+
+    <div class="reading-layout">
+      <main id="main-content" class="lecture-article">
+        <header class="lecture-title">
+          <div class="eyebrow"><span></span>第 01 节 <i>内容预览</i></div>
+          <h1>卷积神经网络</h1>
+          <p>从“为什么不用全连接网络处理图像”出发，逐步理解卷积的局部连接与权重共享，再把步幅、填充、多通道、池化、归一化和分类头组装成一条完整的图像识别流水线。</p>
+          <time datetime="2026-09-21">2026-09-21</time>
+          <div class="article-metadata"><span>8 个主题</span><b>·</b><span>预计阅读 28 分钟</span></div>
+        </header>
+
+        <section class="learning-overview" aria-labelledby="goals-title">
+          <h2 id="goals-title">学完这一节，你能</h2>
+          <ul>
+            <li>解释全连接网络处理图像时参数量为何迅速增长</li>
+            <li>手算一个二维卷积，并由步幅、填充推导输出尺寸</li>
+            <li>说清输入通道、卷积核与输出通道之间的对应关系</li>
+            <li>区分标准卷积、深度可分离卷积与常见卷积变体</li>
+            <li>说明池化、归一化、激活与全连接层各自解决什么问题</li>
+          </ul>
+        </section>
+
+        <nav class="section-overview" aria-label="本节主题导航">
+          <a href="#why-cnn"><span>01</span><strong>为什么需要 CNN</strong></a>
+          <a href="#convolution"><span>02</span><strong>卷积在算什么</strong></a>
+          <a href="#geometry"><span>03</span><strong>步幅与填充</strong></a>
+          <a href="#channels"><span>04</span><strong>通道与卷积核</strong></a>
+          <a href="#variants"><span>05</span><strong>卷积变体</strong></a>
+          <a href="#pooling"><span>06</span><strong>池化与不变性</strong></a>
+          <a href="#normalization"><span>07</span><strong>增强与归一化</strong></a>
+          <a href="#network"><span>08</span><strong>组装完整网络</strong></a>
+        </nav>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">从图像分类问题出发</h2>
+          <article class="article-section" id="why-cnn">
+            <div class="article-section-label"><a href="#why-cnn">01 · 问题动机</a><span>图像分类 · 参数规模</span></div>
+            <div class="lecture-markdown">
+              <h2>为什么图像不适合直接“拉平”</h2>
+              <p>图像分类把一张图像映射成一组类别分数，再通过 <strong>Softmax</strong> 得到概率，最后用交叉熵衡量预测与真实标签之间的差距。困难不在最后的分类器，而在于如何得到既紧凑、又能保留空间结构的图像表示。</p>
+
+              <div class="classification-flow" aria-label="图像分类流程">
+                <div class="mini-image"><img src="assets/domestic-cat.jpg" alt="一只坐着的家猫"></div>
+                <b>图像</b><i>→</i><div><strong>特征提取器</strong><small>学习表示</small></div><i>→</i>
+                <div><strong>线性分类器</strong><small>输出 logits</small></div><i>→</i>
+                <div class="probabilities"><span style="--p:82%">猫 <b>0.821</b></span><span style="--p:12%">狗 <b>0.123</b></span><span style="--p:4%">鸟 <b>0.041</b></span></div>
+              </div>
+
+              <h3>全连接网络的问题：参数量与空间结构</h3>
+              <p>将 <code>32 × 32 × 3</code> 的 RGB 图像拉平成 3,072 维向量后，每个隐藏神经元都要连接全部像素。若设置 4,096 和 2,048 个神经元的两层隐藏层，权重与偏置数量约为：</p>
+              <figure class="fcn-figure">
+                <figcaption>全连接网络如何处理一张图像</figcaption>
+                <div class="fcn-diagram" aria-label="图像拉平后依次连接 3072、4096、2048 和 10 个神经元">
+                  <div class="fcn-source">
+                    <div class="fcn-pixels" aria-hidden="true">
+                      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                    <strong>32 × 32 × 3</strong><span>RGB 图像</span>
+                  </div>
+                  <div class="fcn-flatten"><span>拉平</span><b>→</b></div>
+                  <div class="fcn-layer">
+                    <span>输入层</span><div class="fcn-nodes"><i></i><i></i><i></i><em>⋮</em><i></i><i></i></div><strong>3,072</strong>
+                  </div>
+                  <div class="fcn-links" aria-hidden="true"></div>
+                  <div class="fcn-layer hidden-layer">
+                    <span>隐藏层 1</span><div class="fcn-nodes"><i></i><i></i><i></i><em>⋮</em><i></i><i></i></div><strong>4,096</strong>
+                  </div>
+                  <div class="fcn-links" aria-hidden="true"></div>
+                  <div class="fcn-layer hidden-layer">
+                    <span>隐藏层 2</span><div class="fcn-nodes"><i></i><i></i><i></i><em>⋮</em><i></i><i></i></div><strong>2,048</strong>
+                  </div>
+                  <div class="fcn-links" aria-hidden="true"></div>
+                  <div class="fcn-layer output-layer">
+                    <span>输出层</span><div class="fcn-nodes"><i></i><i></i><i></i><em>⋮</em><i></i><i></i></div><strong>10 类</strong>
+                  </div>
+                </div>
+                <div class="fcn-observations">
+                  <p><strong>连接为何“稠密”</strong>下一层的每个神经元都读取上一层的全部输出，因此每相邻两层之间都需要一张完整权重矩阵。</p>
+                  <p><strong>空间信息去了哪里</strong>拉平后只剩向量下标，原本上下、左右相邻的像素不再以二维邻接关系呈现。</p>
+                </div>
+                <p class="diagram-caption">圆点仅抽样表示神经元；层下方数字才是实际维度。连线纹理表示相邻两层之间的全连接。</p>
+              </figure>
+              <div class="equation-block">
+                <span>(3,072 + 1) × 4,096</span><b>+</b><span>(4,096 + 1) × 2,048</span><b>+</b><span>(2,048 + 1) × 10</span><strong>≈ 2,100 万</strong>
+              </div>
+              <dl class="formula-legend compact-legend">
+                <div><dt>(m + 1) × n</dt><dd>从 m 个输入连接到 n 个神经元时的参数量；额外的 1 表示每个输出神经元都有一个偏置。</dd></div>
+                <div><dt>三项相加</dt><dd>分别对应输入层到隐藏层 1、隐藏层 1 到隐藏层 2，以及隐藏层 2 到输出层。</dd></div>
+              </dl>
+              <p>更关键的是，拉平操作让“相邻像素通常相关”这一先验消失了。CNN 用两个约束回应这个问题：</p>
+              <div class="principle-pair">
+                <div><span>LOCAL</span><h3>局部连接</h3><p>一个神经元只观察输入中的小窗口，也就是它的局部感受野。</p></div>
+                <div><span>SHARED</span><h3>权重共享</h3><p>同一个卷积核扫描整幅图像，在不同位置寻找同一种模式。</p></div>
+              </div>
+              <blockquote><strong>引导问题：</strong>如果一条边从图像左侧移到右侧，我们是否需要重新学习一套“右侧边缘检测器”？卷积的回答是：不需要。</blockquote>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">卷积的核心计算</h2>
+          <article class="article-section" id="convolution">
+            <div class="article-section-label"><a href="#convolution">02 · 核心计算</a><span>局部感受野 · 权重共享</span></div>
+            <div class="lecture-markdown">
+              <h2>一个小窗口，如何提取局部模式</h2>
+              <p>卷积核是一组可学习的权重。它在输入上逐位置滑动，每次取出一个局部窗口，做对应元素乘积再求和，得到特征图中的一个数。</p>
+              <div class="formula convolution-formula">
+                <span>Y[i, j] =</span>
+                <strong><span>Σ<sub>u=0</sub><sup>K<sub>h</sub>−1</sup></span><span>Σ<sub>v=0</sub><sup>K<sub>w</sub>−1</sup></span></strong>
+                <span>X[i + u, j + v] · K[u, v]</span>
+              </div>
+              <dl class="formula-legend">
+                <div><dt>X</dt><dd>输入图像或输入特征图。</dd></div>
+                <div><dt>K</dt><dd>卷积核；K<sub>h</sub>、K<sub>w</sub> 分别是核的高度和宽度。</dd></div>
+                <div><dt>Y</dt><dd>输出特征图。</dd></div>
+                <div><dt>i, j</dt><dd>当前输出元素在 Y 中的行、列坐标。</dd></div>
+                <div><dt>u, v</dt><dd>卷积核内部的行、列坐标，也是求和变量。</dd></div>
+                <div><dt>Σ</dt><dd>将局部窗口内 K<sub>h</sub> × K<sub>w</sub> 个对应元素乘积全部相加。</dd></div>
+              </dl>
+              <p class="formula-assumption"><strong>适用条件：</strong>这里先写单通道、步幅为 1、无填充且不含偏置的形式。多通道卷积还要对所有输入通道求和；一般步幅与填充会进一步改变 X 的取值坐标。</p>
+              <aside class="note"><strong>术语提醒</strong><p>深度学习框架通常实现的是不翻转卷积核的“互相关”，但习惯上仍称为卷积。只要训练与推理采用同一定义，卷积核会学习到相应方向的权重。</p></aside>
+
+              <figure class="teaching-lab" id="convolution-demo">
+                <figcaption><span>交互演示</span> 用垂直边缘核扫描 5 × 5 输入</figcaption>
+                <div class="conv-workspace">
+                  <div class="matrix-panel"><h3>输入 X</h3><div class="matrix input-matrix" id="input-matrix"></div></div>
+                  <div class="operation-sign">×</div>
+                  <div class="matrix-panel"><h3>卷积核 K</h3><div class="matrix kernel-matrix" id="kernel-matrix"></div></div>
+                  <div class="operation-sign">=</div>
+                  <div class="matrix-panel"><h3>特征图 Y</h3><div class="matrix output-matrix" id="output-matrix"></div></div>
+                </div>
+                <div class="demo-readout"><span id="conv-position">窗口位置 (1, 1)</span><code id="conv-calculation"></code></div>
+                <div class="lab-controls">
+                  <button id="conv-reset" type="button">重置</button>
+                  <span id="conv-step-count">1 / 9</span>
+                  <button id="conv-prev" type="button" aria-label="上一个卷积位置">←</button>
+                  <button class="primary" id="conv-next" type="button">下一个位置 →</button>
+                </div>
+              </figure>
+
+              <h3>平移等变，不等于平移不变</h3>
+              <p>同一个卷积核在所有位置共享：输入中的模式向右移动，输出特征也会相应向右移动。这叫<strong>平移等变</strong>，可写作 <code>f(Tx) = T f(x)</code>。其中 <code>x</code> 是输入，<code>f</code> 是卷积操作，<code>T</code> 是平移算子；等式表示“先平移再卷积”和“先卷积再平移”得到相同结果。输出跟着输入移动，并不是输出完全不变。</p>
+              <div class="concept-contrast">
+                <div><span>等变 Equivariance</span><strong>输入怎么移动，特征图就怎么移动</strong></div>
+                <div><span>不变 Invariance</span><strong>输入发生变化，最终表示尽量保持不变</strong></div>
+              </div>
+              <p>标准卷积并不天然对旋转、缩放或一般仿射变换等变。数据增强是提升这些变化下鲁棒性的常用手段。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">控制特征图的空间尺寸</h2>
+          <article class="article-section" id="geometry">
+            <div class="article-section-label"><a href="#geometry">03 · 空间尺寸</a><span>Padding · Stride</span></div>
+            <div class="lecture-markdown">
+              <h2>步幅决定采样密度，填充决定边界</h2>
+              <p><strong>步幅（stride）</strong>是卷积核每次移动的格数；步幅越大，输出越小。<strong>填充（padding）</strong>是在输入边缘补值，最常见的是补零，用来保留边缘信息或控制输出大小。</p>
+              <div class="dimension-formula">
+                <span>输出尺寸</span>
+                <strong>W<sub>out</sub> = ⌊ (W<sub>in</sub> + 2P − K) / S ⌋ + 1</strong>
+              </div>
+              <dl class="formula-legend dimension-legend">
+                <div><dt>W<sub>in</sub></dt><dd>输入特征图的宽度。</dd></div>
+                <div><dt>W<sub>out</sub></dt><dd>输出特征图的宽度。</dd></div>
+                <div><dt>K</dt><dd>卷积核在该方向上的尺寸。</dd></div>
+                <div><dt>S</dt><dd>步幅，即窗口每次移动的格数。</dd></div>
+                <div><dt>P</dt><dd>输入两侧各补 P 格，因此总共增加 2P。</dd></div>
+                <div><dt>⌊ · ⌋</dt><dd>向下取整，只计算卷积核能够完整落入的起始位置。</dd></div>
+              </dl>
+              <p class="formula-assumption"><strong>适用条件：</strong>公式按宽度方向计算，假设空洞率为 1。高度方向用同一公式分别代入 H<sub>in</sub>、核高、纵向步幅与填充。</p>
+              <div class="geometry-tool">
+                <div class="geometry-controls">
+                  <label>输入尺寸 <output id="input-size-output">7</output><input id="input-size" type="range" min="5" max="11" value="7"></label>
+                  <label>卷积核 <output id="kernel-size-output">3</output><input id="kernel-size" type="range" min="1" max="5" step="2" value="3"></label>
+                  <label>步幅 <output id="stride-output">1</output><input id="stride" type="range" min="1" max="3" value="1"></label>
+                  <label>填充 <output id="padding-output">1</output><input id="padding" type="range" min="0" max="3" value="1"></label>
+                </div>
+                <div class="geometry-result"><small>当前输出宽高</small><strong id="geometry-result">7 × 7</strong><span id="geometry-detail">⌊(7 + 2×1 − 3) / 1⌋ + 1 = 7</span></div>
+              </div>
+              <aside class="note"><strong>常用设置</strong><p>奇数尺寸卷积核、步幅 1 时，令 <code>P = (K − 1) / 2</code>，输入和输出的宽高相同，通常称为 “same” 卷积。</p></aside>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">从灰度图到多通道特征</h2>
+          <article class="article-section" id="channels">
+            <div class="article-section-label"><a href="#channels">04 · 通道关系</a><span>多通道 · 深度可分离卷积</span></div>
+            <div class="lecture-markdown">
+              <h2>一个输出通道，要汇总所有输入通道</h2>
+              <p>若输入有 <code>C<sub>in</sub></code> 个通道，一个标准卷积核也必须有相同的通道深度。每个输入通道先完成空间卷积，结果相加后形成<strong>一个</strong>输出通道；使用 <code>C<sub>out</sub></code> 组卷积核，就得到 <code>C<sub>out</sub></code> 个输出特征图。</p>
+
+              <div class="channel-diagram" aria-label="多通道卷积示意图">
+                <div class="tensor-stack rgb"><i>R</i><i>G</i><i>B</i><small>3 个输入通道</small></div>
+                <span>→</span>
+                <div class="kernel-bank"><b>3 × 3 × 3</b><b>3 × 3 × 3</b><b>3 × 3 × 3</b><b>3 × 3 × 3</b><small>4 组卷积核</small></div>
+                <span>→</span>
+                <div class="tensor-stack features"><i></i><i></i><i></i><i></i><small>4 个输出通道</small></div>
+              </div>
+
+              <h3>标准卷积与深度可分离卷积</h3>
+              <p>标准卷积同时处理空间与通道混合。深度可分离卷积把它拆成两步：先用 <strong>Depthwise</strong> 卷积逐通道提取空间信息，再用 <code>1 × 1</code> 的 <strong>Pointwise</strong> 卷积混合通道。</p>
+              <table>
+                <thead><tr><th>方法</th><th>参数量公式</th><th>3 输入 → 4 输出，3 × 3 核</th></tr></thead>
+                <tbody>
+                  <tr><td>标准卷积</td><td>K² · C<sub>in</sub> · C<sub>out</sub></td><td><strong>3 × 3 × 3 × 4 = 108</strong></td></tr>
+                  <tr><td>深度可分离卷积</td><td>K² · C<sub>in</sub> + C<sub>in</sub> · C<sub>out</sub></td><td><strong>3 × 3 × 3 + 3 × 4 = 39</strong></td></tr>
+                </tbody>
+              </table>
+              <dl class="formula-legend compact-legend">
+                <div><dt>K</dt><dd>正方形卷积核的边长，因此每个空间卷积核有 K² 个权重。</dd></div>
+                <div><dt>C<sub>in</sub></dt><dd>输入通道数；Depthwise 阶段为每个输入通道分别学习一个空间核。</dd></div>
+                <div><dt>C<sub>out</sub></dt><dd>输出通道数；Pointwise 阶段用 C<sub>in</sub> × C<sub>out</sub> 个 1 × 1 权重混合通道。</dd></div>
+                <div><dt>计数范围</dt><dd>表中只统计卷积核权重，且 Depthwise 的通道倍增系数为 1。若两个阶段都使用偏置，还需再加 C<sub>in</sub> + C<sub>out</sub>。</dd></div>
+              </dl>
+              <blockquote>参数从 108 降到 39，不代表任何任务上都同样好；它换来的是更低的计算与参数成本，因此常见于移动端网络。</blockquote>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">扩展卷积的采样方式</h2>
+          <article class="article-section" id="variants">
+            <div class="article-section-label"><a href="#variants">05 · 采样变体</a><span>感受野 · 上采样 · 自适应形状</span></div>
+            <div class="lecture-markdown">
+              <h2>三种常见卷积变体</h2>
+              <div class="variant-list">
+                <article>
+                  <div class="dilation-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                  <div><span>01</span><h3>空洞卷积</h3><p>在采样点之间留出间隔，不增加核参数量就扩大感受野。有效核尺寸为 <code>K<sub>eff</sub> = K + (K − 1)(d − 1)</code>。其中 <code>K</code> 是原始核尺寸，<code>d</code> 是空洞率，相邻采样点间隔为 d；<code>K<sub>eff</sub></code> 是它覆盖输入的等效宽度。<code>d = 1</code> 时退化为普通卷积。</p></div>
+                </article>
+                <article>
+                  <div class="upsample-icon" aria-hidden="true"><i></i><i></i></div>
+                  <div><span>02</span><h3>转置卷积</h3><p>学习把低分辨率特征映射到更高分辨率，常用于分割和生成模型。它不是普通卷积的数值逆运算。</p></div>
+                </article>
+                <article>
+                  <div class="deform-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                  <div><span>03</span><h3>可变形卷积</h3><p>为规则网格上的采样点学习二维偏移，使感受野适应目标的几何形状。</p></div>
+                </article>
+              </div>
+              <p class="section-takeaway"><strong>小结：</strong>标准卷积改变的是局部模式提取；这些变体进一步改变“在哪里采样”或“输出到多大空间”。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">压缩空间信息</h2>
+          <article class="article-section" id="pooling">
+            <div class="article-section-label"><a href="#pooling">06 · 空间压缩</a><span>Max Pooling · Average Pooling</span></div>
+            <div class="lecture-markdown">
+              <h2>池化：用一个值概括一个局部区域</h2>
+              <p>池化按通道独立进行，不改变通道数量。最大池化保留窗口内最强响应，平均池化保留整体水平；二者都能降低空间分辨率和后续计算量。</p>
+              <figure class="teaching-lab pooling-lab">
+                <figcaption><span>交互演示</span> 比较 2 × 2 最大池化与平均池化</figcaption>
+                <div class="pooling-toolbar" role="group" aria-label="池化方式">
+                  <button class="active" type="button" data-pool="max">最大池化</button>
+                  <button type="button" data-pool="avg">平均池化</button>
+                </div>
+                <div class="pooling-demo">
+                  <div><h3>输入 4 × 4</h3><div class="matrix pool-input" id="pool-input"></div></div>
+                  <span>→</span>
+                  <div><h3 id="pool-output-label">最大池化输出</h3><div class="matrix pool-output" id="pool-output"></div></div>
+                </div>
+              </figure>
+              <aside class="correction"><strong>准确理解“不变性”</strong><p>局部池化主要提供<strong>对小范围位移和形变的容忍度</strong>；跨越池化窗口的平移仍可能改变输出，完整 CNN 也不会仅靠池化自动获得全局平移不变性。</p></aside>
+              <p>因此可以这样记：卷积优先保留“模式出现在哪里”的结构，池化逐步弱化精确位置，分类头最终更关心“模式是否出现”。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">让训练更稳定、更鲁棒</h2>
+          <article class="article-section" id="normalization">
+            <div class="article-section-label"><a href="#normalization">07 · 稳定与鲁棒</a><span>数据增强 · 归一化</span></div>
+            <div class="lecture-markdown">
+              <h2>模型没有的几何先验，用数据和统计补上</h2>
+              <p><strong>数据增强</strong>在不改变标签语义的前提下，对训练图像做裁剪、翻转、颜色扰动等变换，让模型见到同一类别的更多合理变化。旋转或缩放是否可用，必须由具体任务决定。</p>
+              <figure class="augmentation-figure">
+                <div class="augmentation-grid">
+                  <div><img src="assets/domestic-cat.jpg" alt="未经增强的家猫照片"><span>原始图像</span></div>
+                  <div><img class="aug-crop" src="assets/domestic-cat.jpg" alt="随机裁剪后的家猫照片"><span>随机裁剪</span></div>
+                  <div><img class="aug-flip" src="assets/domestic-cat.jpg" alt="水平翻转后的家猫照片"><span>水平翻转</span></div>
+                  <div><img class="aug-color" src="assets/domestic-cat.jpg" alt="颜色扰动后的家猫照片"><span>颜色扰动</span></div>
+                </div>
+                <figcaption>同一训练样本的四种视图。增强改变像素呈现，但“家猫”这一标签保持不变。照片：<a href="https://commons.wikimedia.org/wiki/File:Domestic_Cat.jpg" target="_blank" rel="noreferrer">Domestic Cat</a>，公共领域。</figcaption>
+              </figure>
+
+              <h3>归一化在“哪些维度”上统计</h3>
+              <p>通用形式是先减均值、除以标准差，再用可学习的缩放 <code>γ</code> 与偏移 <code>β</code> 恢复表达能力。不同方法的关键区别，是对形状 <code>N × C × H × W</code> 的哪些维度求统计量。</p>
+              <div class="formula"><span>y = γ ·</span><strong>(x − μ) / √(σ² + ε)</strong><span>+ β</span></div>
+              <dl class="formula-legend normalization-legend">
+                <div><dt>x / y</dt><dd>归一化前的输入值与变换后的输出值。</dd></div>
+                <div><dt>μ</dt><dd>选定统计范围内 x 的均值。</dd></div>
+                <div><dt>σ²</dt><dd>同一统计范围内 x 的方差。</dd></div>
+                <div><dt>ε</dt><dd>很小的正常数，防止方差接近 0 时除零。</dd></div>
+                <div><dt>γ / β</dt><dd>训练得到的缩放与偏移参数，使层可以恢复或重新调整特征分布。</dd></div>
+                <div><dt>N, C, H, W</dt><dd>批量大小、通道数、特征图高度与宽度。</dd></div>
+              </dl>
+              <table class="norm-table">
+                <thead><tr><th>方法</th><th>每组统计的范围</th><th>特点</th></tr></thead>
+                <tbody>
+                  <tr><td>Batch Norm</td><td>固定通道 C，统计 N、H、W</td><td>训练依赖批次；推理使用训练期移动均值与方差</td></tr>
+                  <tr><td>Layer Norm</td><td>对每个样本统计其特征维度</td><td>训练与推理行为一致，不依赖批大小</td></tr>
+                  <tr><td>Instance Norm</td><td>固定样本 N 和通道 C，统计 H、W</td><td>常用于风格迁移等图像生成任务</td></tr>
+                  <tr><td>Group Norm</td><td>把通道分组，组内统计 C、H、W</td><td>小批量训练时通常比 Batch Norm 稳定</td></tr>
+                </tbody>
+              </table>
+              <aside class="note"><strong>Batch Norm 的训练与推理</strong><p>训练时使用当前 mini-batch 的统计量，并更新移动平均；推理时使用已经积累的移动统计量，避免预测依赖当前批次里还有哪些样本。</p></aside>
+            </div>
+          </article>
+        </section>
+
+        <section class="reading-topic">
+          <h2 class="reading-topic-heading">把组件组装成分类器</h2>
+          <article class="article-section" id="network">
+            <div class="article-section-label"><a href="#network">08 · 完整网络</a><span>激活 · 层级特征 · 分类头</span></div>
+            <div class="lecture-markdown">
+              <h2>从像素到类别，是一条逐级抽象的路径</h2>
+              <p>卷积本质上仍是线性运算。若连续堆叠线性层，整体仍可合并成一次线性变换，因此需要 ReLU 等<strong>非线性激活函数</strong>。浅层通常响应边缘、颜色和纹理，深层逐步组合出部件与对象级语义。</p>
+              <div class="network-flow" aria-label="卷积分类网络流程">
+                <div class="network-input"><img src="assets/domestic-cat.jpg" alt="分类网络的输入图像"><small>28 × 28</small><strong>输入图像</strong></div><i>→</i>
+                <div><small>5 × 5</small><strong>卷积</strong></div><i>→</i>
+                <div><small>非线性</small><strong>ReLU</strong></div><i>→</i>
+                <div><small>2 × 2</small><strong>池化</strong></div><i>→</i>
+                <div><small>5 × 5</small><strong>卷积</strong></div><i>→</i>
+                <div><small>全局组合</small><strong>分类头</strong></div>
+              </div>
+
+              <div class="feature-levels">
+                <div><span>浅层</span><strong>边缘 · 方向 · 颜色</strong><i class="edge-samples"></i></div>
+                <div><span>中层</span><strong>纹理 · 角点 · 局部部件</strong><i class="texture-samples"></i></div>
+                <div><span>深层</span><strong>对象部件 · 类别语义</strong><i class="object-samples"></i></div>
+              </div>
+
+              <figure class="filter-visualization">
+                <img src="assets/convnet-filters.png" alt="ResNet50V2 中层的 64 个卷积滤波器偏好模式可视化">
+                <figcaption>
+                  <span>如何读这张图</span>
+                  <strong>不同卷积核会偏好不同的纹理基元</strong>
+                  <p>每个方格都是通过梯度上升生成的合成输入，目标是让一个固定滤波器产生尽可能强的响应。它不是自然图像，也不是某张图像的特征图；它表达的是卷积核“最想看到”的局部模式。</p>
+                  <small>可视化模型：ResNet50V2，层 <code>conv3_block4_out</code>。来源：<a href="https://keras.io/examples/vision/visualizing_what_convnets_learn/" target="_blank" rel="noreferrer">Keras 官方示例</a>。</small>
+                </figcaption>
+              </figure>
+
+              <h3>为什么 CNN 参数更少</h3>
+              <p>以一个用于 MNIST 的小型网络为例：全连接方案约有 <strong>101.77k</strong> 个参数；由两层卷积和一个分类头组成的 CNN 共有 <strong>8,490</strong> 个参数。数量级差异来自局部连接与权重共享，而不是因为 CNN 忽略了整张图；随着层数增加，感受野会逐层扩大。</p>
+              <div class="parameter-compare">
+                <div><span>全连接网络</span><strong>101.77k</strong><i style="--width:100%"></i></div>
+                <div><span>卷积网络</span><strong>8.49k</strong><i style="--width:8.34%"></i></div>
+              </div>
+              <aside class="note"><strong>完整参数计算</strong><p>第一层卷积、第二层卷积和分类头分别贡献参数：<code>(10×1×5×5+10) + (20×10×5×5+20) + (320×10+10) = 8,490</code>。第一项中的 10 是输出通道数、1 是输入通道数；第二项的 20 和 10 分别是输出与输入通道数；两层都使用 5 × 5 核。每项末尾的 10、20、10 是偏置数量，320 是展平后送入分类头的特征数。</p></aside>
+              <p class="section-takeaway"><strong>这一节的主线：</strong>卷积负责在各处复用局部模式检测器，非线性提供表达能力，池化压缩位置细节，归一化稳定特征分布，最后由分类头汇总为类别分数。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="summary-section" id="summary">
+          <div class="article-section-label"><a href="#summary">总结</a><span>概念检查</span></div>
+          <h2>把 CNN 看成三个连续的问题</h2>
+          <div class="summary-map">
+            <div><span>01</span><strong>看哪里？</strong><p>卷积核的大小、步幅、填充和空洞率决定采样位置与感受野。</p></div>
+            <div><span>02</span><strong>学什么？</strong><p>多组共享卷积核从局部结构中学习不同模式，并逐层组合。</p></div>
+            <div><span>03</span><strong>如何做决定？</strong><p>激活、归一化与池化加工特征，分类头把全局证据变成类别分数。</p></div>
+          </div>
+          <div class="self-check">
+            <h3>离开前自检</h3>
+            <p>输入为 <code>32 × 32 × 3</code>，使用 16 个 <code>3 × 3</code> 卷积核、步幅 1、填充 1。输出形状是什么？忽略偏置时共有多少参数？</p>
+            <details><summary>查看答案</summary><p>输出为 <code>32 × 32 × 16</code>：填充 1 抵消了 3 × 3 核造成的边缘缩减，而 16 个卷积核产生 16 个输出通道。参数量为 <code>3 × 3 × 3 × 16 = 432</code>，四个因子依次表示核高、核宽、输入通道数和输出通道数。</p></details>
+          </div>
+        </section>
+
+        <footer class="page-footer">
+          <span>01 · 卷积神经网络</span>
+          <span>下一节：训练卷积网络（待整理） →</span>
+        </footer>
+      </main>
+
+      <aside class="page-toc" aria-label="本页目录">
+        <p>本节内容</p>
+        <a href="#why-cnn"><span>01</span>为什么需要 CNN</a>
+        <a href="#convolution"><span>02</span>卷积在算什么</a>
+        <a href="#geometry"><span>03</span>步幅与填充</a>
+        <a href="#channels"><span>04</span>通道与卷积核</a>
+        <a href="#variants"><span>05</span>卷积变体</a>
+        <a href="#pooling"><span>06</span>池化与不变性</a>
+        <a href="#normalization"><span>07</span>增强与归一化</a>
+        <a href="#network"><span>08</span>组装完整网络</a>
+        <a href="#summary"><span>09</span>本节总结</a>
+        <div class="toc-progress"><i id="reading-progress"></i></div>
+      </aside>
+    </div>
+  </div>
+  <div class="sidebar-scrim" id="sidebar-scrim"></div>
+  <script src="script.js"></script>
+</body>
+</html>
