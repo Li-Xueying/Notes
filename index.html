@@ -106,7 +106,8 @@
               <p>将 <code>32 × 32 × 3</code> 的 RGB 图像拉平成 3,072 维向量后，每个隐藏神经元都要连接全部像素。若设置 4,096 和 2,048 个神经元的两层隐藏层，权重与偏置数量约为：</p>
               <figure class="fcn-figure">
                 <figcaption>全连接网络如何处理一张图像</figcaption>
-                <div class="fcn-diagram" aria-label="图像拉平后依次连接 3072、4096、2048 和 10 个神经元">
+                <div class="fcn-diagram" role="img" aria-label="图像拉平后进入 3072、4096、2048、10 个神经元的四层网络。每层只显示部分神经元，连线表示第一位神经元与相邻层可见神经元的连接，其余由省略号表示。">
+                  <svg class="fcn-edges" aria-hidden="true"></svg>
                   <div class="fcn-source">
                     <div class="fcn-pixels" aria-hidden="true">
                       <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -134,7 +135,6 @@
                   <p><strong>连接为何“稠密”</strong>下一层的每个神经元都读取上一层的全部输出，因此每相邻两层之间都需要一张完整权重矩阵。</p>
                   <p><strong>空间信息去了哪里</strong>拉平后只剩向量下标，原本上下、左右相邻的像素不再以二维邻接关系呈现。</p>
                 </div>
-                <p class="diagram-caption">圆点仅抽样表示神经元；层下方数字才是实际维度。连线纹理表示相邻两层之间的全连接。</p>
               </figure>
               <div class="equation-block">
                 <span>(3,072 + 1) × 4,096</span><b>+</b><span>(4,096 + 1) × 2,048</span><b>+</b><span>(2,048 + 1) × 10</span><strong>≈ 2,100 万</strong>

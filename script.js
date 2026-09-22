@@ -8,6 +8,46 @@ const inputValues = [
 const kernelValues = [-1, 0, 1, -1, 0, 1, -1, 0, 1];
 let convStep = 0;
 
+const networkDiagram = document.querySelector(".fcn-diagram");
+const networkEdges = networkDiagram.querySelector(".fcn-edges");
+const networkLayers = [...networkDiagram.querySelectorAll(".fcn-layer")];
+
+function renderNetworkEdges() {
+  const diagramBounds = networkDiagram.getBoundingClientRect();
+  networkEdges.setAttribute("viewBox", `0 0 ${diagramBounds.width} ${diagramBounds.height}`);
+  networkEdges.replaceChildren();
+
+  function center(element) {
+    const bounds = element.getBoundingClientRect();
+    return [bounds.left + bounds.width / 2 - diagramBounds.left, bounds.top + bounds.height / 2 - diagramBounds.top];
+  }
+
+  function connect(from, to, className = "") {
+    const [x1, y1] = center(from);
+    const [x2, y2] = center(to);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x1);
+    line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2);
+    line.setAttribute("y2", y2);
+    if (className) line.setAttribute("class", className);
+    networkEdges.appendChild(line);
+  }
+
+  for (let index = 0; index < networkLayers.length - 1; index += 1) {
+    const from = [...networkLayers[index].querySelectorAll(".fcn-nodes i")];
+    const to = [...networkLayers[index + 1].querySelectorAll(".fcn-nodes i")];
+    connect(from[0], to[0], "fcn-first-edge");
+    from.slice(1).forEach((node) => connect(node, to[0]));
+    to.slice(1).forEach((node) => connect(from[0], node));
+    connect(networkLayers[index].querySelector(".fcn-nodes em"), to[0], "fcn-omitted-edge");
+    connect(from[0], networkLayers[index + 1].querySelector(".fcn-nodes em"), "fcn-omitted-edge");
+  }
+}
+
+renderNetworkEdges();
+new ResizeObserver(renderNetworkEdges).observe(networkDiagram);
+
 function makeMatrix(element, values) {
   values.forEach((value) => {
     const cell = document.createElement("span");

@@ -124,8 +124,12 @@ button { color: inherit; border: 0; background: none; cursor: pointer; }
 .probabilities b { font-weight: 500; }
 .fcn-figure { margin: 25px 0; padding: 20px; border: 1px solid #d4e1d8; border-radius: 6px; background: #fbfdfb; }
 .fcn-figure > figcaption { margin-bottom: 22px; color: #315e43; font-size: 14px; font-weight: 650; }
-.fcn-diagram { display: grid; grid-template-columns: 84px 44px 76px 46px 76px 46px 76px 46px 76px; justify-content: center; align-items: center; gap: 4px; min-height: 190px; }
-.fcn-source, .fcn-layer { min-width: 0; text-align: center; }
+.fcn-diagram { position: relative; display: grid; grid-template-columns: 84px 44px 76px 46px 76px 46px 76px 46px 76px; justify-content: center; align-items: center; gap: 4px; min-height: 190px; }
+.fcn-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.fcn-edges line { stroke: #a7c2b0; stroke-width: 1; }
+.fcn-edges line.fcn-first-edge { stroke: #4e936e; stroke-width: 1.25; }
+.fcn-edges line.fcn-omitted-edge { stroke-dasharray: 2 3; opacity: .65; }
+.fcn-source, .fcn-layer { position: relative; min-width: 0; text-align: center; }
 .fcn-source strong, .fcn-source span, .fcn-layer > span, .fcn-layer > strong { display: block; }
 .fcn-source strong, .fcn-layer > strong { margin-top: 7px; color: #315e43; font: 11px var(--font-mono); }
 .fcn-source span, .fcn-layer > span { color: #7d9084; font-size: 10px; }
@@ -138,14 +142,16 @@ button { color: inherit; border: 0; background: none; cursor: pointer; }
 .fcn-flatten b { display: block; color: #7a9585; font-size: 18px; font-weight: 400; }
 .fcn-nodes { width: 42px; min-height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; margin: 7px auto 0; }
 .fcn-nodes i { width: 12px; height: 12px; display: block; border: 2px solid #5f9274; border-radius: 50%; background: white; }
+.fcn-nodes i:first-child { background: #5f9274; }
 .fcn-nodes em { height: 17px; color: #90a298; font: normal 14px/12px var(--font-mono); }
 .hidden-layer .fcn-nodes i { border-color: #477b92; background: #edf4f6; }
+.hidden-layer .fcn-nodes i:first-child { background: #477b92; }
 .output-layer .fcn-nodes i { border-color: #b58442; background: #fff8e9; }
-.fcn-links { width: 100%; height: 110px; opacity: .5; background-image: repeating-linear-gradient(12deg, transparent 0 8px, #7fa08d 8px 9px, transparent 9px 15px), repeating-linear-gradient(-12deg, transparent 0 8px, #9ab0a3 8px 9px, transparent 9px 15px); -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+.output-layer .fcn-nodes i:first-child { background: #b58442; }
+.fcn-links { width: 100%; height: 110px; }
 .fcn-observations { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
 .fcn-observations p { margin: 0; color: #65796d; font-size: 12px; line-height: 1.7; }
 .fcn-observations strong { display: block; margin-bottom: 3px; color: #315e43; font-size: 12px; }
-.fcn-figure .diagram-caption { margin: 13px 0 0; color: #899990; font-size: 10px; line-height: 1.6; }
 .equation-block { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin: 23px 0; padding: 18px; color: #4b6655; border: 1px solid var(--border); background: #fbfcfb; font: 13px var(--font-mono); }
 .equation-block strong { color: var(--primary); font-size: 17px; }
 .principle-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
@@ -410,6 +416,13 @@ button { color: inherit; border: 0; background: none; cursor: pointer; }
   .parameter-compare > div { grid-template-columns: 100px 55px 1fr; }
   .filter-visualization { grid-template-columns: 1fr; }
   .page-footer { display: grid; gap: 7px; }
+}
+
+@media (max-width: 420px) {
+  .fcn-diagram { grid-template-columns: 40px 20px 38px 15px 38px 15px 38px 15px 38px; }
+  .fcn-pixels { width: 38px; height: 38px; }
+  .fcn-source strong, .fcn-layer > strong { font-size: 8px; }
+  .fcn-layer > span { font-size: 7px; }
 }
 
 @media print {
