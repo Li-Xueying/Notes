@@ -30,3 +30,132 @@
 /* Lecture 04 · Transformer Models */
 .transformer-page .article-section-label span{color:#745f90}.transformer-page .article-section-label button{color:#674f82;background:#f4f0f7;border-color:#ddd2e6}.transformer-page .article-section-label button:hover{background:#ebe3f1}.transformer-page .intro-visual{border-top-color:#9b85ad}.transformer-page .intro-slide-progress span{background:#745f90}.transformer-page .cnn-lab{border-top-color:#745f90}.transformer-page .cnn-lab-heading span,.transformer-page .cnn-lab-heading>b{color:#674f82}.transformer-page .cnn-lab-heading output{min-width:86px;padding:0 8px;background:#745f90;font-size:19px}.transformer-slider-list{display:grid;gap:12px}.transformer-slider-list label{display:grid;grid-template-columns:64px minmax(0,1fr) 42px;align-items:center;gap:12px;color:#4e6559;font-size:14px}.transformer-slider-list input{width:100%;accent-color:#745f90}.transformer-slider-list b{color:#674f82;font:600 13px var(--mono);text-align:right}.transformer-weight-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0 15px}.transformer-weight-row div{display:grid;grid-template-columns:auto minmax(0,1fr) 34px;align-items:center;gap:8px;min-width:0;padding:10px;background:#f8faf8;border:1px solid #d5e2da;border-radius:4px}.transformer-weight-row span{font-size:13px}.transformer-weight-row i{position:relative;height:8px;overflow:hidden;background:#e5ebe7;border-radius:2px}.transformer-weight-row i::after{content:"";display:block;width:calc(var(--weight)*100%);height:100%;background:#745f90}.transformer-weight-row b{color:#674f82;font:600 12px var(--mono);text-align:right}.transformer-mask-buttons{margin-bottom:18px}.transformer-mask-stage{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 17px}.transformer-mask-stage div{display:grid;place-items:center;gap:6px;min-height:82px;padding:10px;border:1px solid #cbdcd2;border-radius:4px}.transformer-mask-stage .visible{background:#edf5f0;border-color:#bcd3c6}.transformer-mask-stage .masked{background:#f1f2f1;color:#8d9992}.transformer-mask-stage span{font-size:18px;font-weight:650}.transformer-mask-stage b{font:12px var(--mono)}.moe-sliders{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px}.transformer-expert-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0 15px}.transformer-expert-grid div{display:grid;place-items:center;gap:7px;min-height:76px;padding:10px;color:#7b8b82;background:#f3f5f4;border:1px solid #d8dfda;border-radius:4px}.transformer-expert-grid div.selected{color:#674f82;background:#f3edf7;border-color:#cbbbd6}.transformer-expert-grid span{font-size:17px;font-weight:650}.transformer-expert-grid b{font:12px var(--mono)}
 @media(max-width:767px){.transformer-page .course-intro h1{font-size:31px}.transformer-page .cnn-equation{font-size:14px}.transformer-weight-row{grid-template-columns:1fr}.moe-sliders{grid-template-columns:1fr}.transformer-expert-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.transformer-mask-stage{gap:6px}.transformer-mask-stage div{min-height:68px;padding:6px}.transformer-slider-list label{grid-template-columns:48px minmax(0,1fr) 36px;gap:8px}}
+
+/* Shared lecture controls and an independent, viewport-bounded contents column. */
+.intro-page .intro-reading-layout {
+  grid-template-columns: minmax(0, 1fr) 184px;
+  column-gap: 32px;
+}
+.intro-page .home-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.intro-page .page-toc {
+  align-self: start;
+  min-width: 0;
+  max-height: calc(100vh - 138px);
+  max-height: calc(100dvh - 138px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.intro-page .page-toc :is(.cnn-section-toc, .rnn-section-toc, .tf-section-toc) {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  background: transparent;
+}
+.intro-page .intro-modebar {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  gap: 12px 10px;
+  align-items: center;
+}
+.intro-page .intro-modebar .button {
+  min-height: 42px;
+  line-height: 24px;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.intro-page .intro-page-count {
+  min-width: 0;
+  margin-left: 0;
+  justify-self: end;
+  line-height: 1.6;
+  text-align: right;
+}
+.intro-page .article-section-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+  letter-spacing: 0;
+}
+.intro-page .article-section-label > span {
+  min-width: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.intro-page .article-section-label button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 12px;
+  color: #476257;
+  background: #fff;
+  border: 1px solid #d8e3dc;
+  border-radius: 5px;
+  font: 550 13px/20px var(--sans);
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: .16s ease;
+}
+.intro-page .article-section-label button:hover {
+  color: var(--primary);
+  background: #f3f6f5;
+  border-color: #b9cfc3;
+}
+@media (max-width: 1279px) {
+  .intro-page .intro-reading-layout {
+    display: block;
+    max-width: 900px;
+  }
+  .intro-page .page-toc { display: none; }
+  .intro-page .intro-page-count {
+    grid-column: 1 / -1;
+    justify-self: start;
+    text-align: left;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .intro-page .header-nav {
+    display: none;
+    position: absolute;
+    top: 76px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 12px 18px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .intro-page .header-nav.open { display: flex; }
+  .intro-page .header-nav a, .intro-page .institution {
+    padding: 10px 0;
+    border: 0;
+  }
+  .intro-page .mobile-menu { display: block; }
+  .intro-page .sidebar {
+    left: -280px;
+    transition: left .2s ease;
+  }
+  .intro-page .sidebar.open { left: 0; }
+  .intro-page .site-body {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+@media (max-width: 767px) {
+  .intro-page .intro-modebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .intro-page .intro-modebar .button { width: 100%; }
+  .intro-page .article-section-label { column-gap: 12px; }
+}
