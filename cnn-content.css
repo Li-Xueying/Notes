@@ -1,0 +1,44 @@
+.cnn-page .intro-visual { margin: 20px 0 24px; padding: 10px 0; border: 0; border-radius: 0; background: transparent; }
+.cnn-page .cnn-topic { scroll-margin-top: 8px; }
+.cnn-figure-link { display: block; cursor: zoom-in; }
+.cnn-figure-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.cnn-reading-motion { margin-top: 12px; color: #52665d; font-size: 14px; }
+.cnn-reading-motion summary { cursor: pointer; line-height: 1.6; }
+.cnn-reading-motion img { margin-top: 12px; background: #fff; }
+.cnn-page .intro-slide-heading > div:first-child { min-width: 0; }
+.cnn-page .intro-slide-heading h2 { overflow-wrap: anywhere; }
+.cnn-page .intro-slide-number { flex-shrink: 0; }
+.cnn-page .intro-slide-note { line-height: 1.8; }
+.cnn-page .intro-slide-image { min-height: 0; aspect-ratio: 960 / 417; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.cnn-page .intro-slide-image img { max-height: none; }
+.cnn-page .intro-slide-image .cnn-figure-link { width: 100%; }
+.cnn-page .cnn-section-toc { height: auto; margin: 0; background: transparent; max-height: 58vh; overflow-y: auto; }
+.cnn-page .cnn-section-toc a { font-size: 12px; line-height: 1.5; padding-top: 5px; padding-bottom: 5px; }
+.cnn-page h1, .cnn-page h2, .cnn-page h3, .cnn-page button { letter-spacing: 0; }
+.cnn-page:has(#slides-mode:not([hidden])) .intro-lecture-header { padding: 16px 0 8px; }
+.cnn-page:has(#slides-mode:not([hidden])) .intro-lecture-header h1 { font-size: 28px; line-height: 1.4; margin: 0; }
+.cnn-page:has(#slides-mode:not([hidden])) .intro-lecture-header > .eyebrow,
+.cnn-page:has(#slides-mode:not([hidden])) .intro-lecture-header > .english-title,
+.cnn-page:has(#slides-mode:not([hidden])) .intro-lecture-header > .intro-copy { display: none; }
+.cnn-page:has(#slides-mode:not([hidden])) .intro-modebar { margin-top: 12px; }
+.cnn-page .intro-slides-panel { padding-top: 18px; }
+.cnn-page #slide-window-stage { width: 100%; aspect-ratio: 960 / 417; }
+.cnn-page #slide-window-stage > svg { display: block; width: 100%; height: auto; }
+.cnn-animation-controls { display: flex; align-items: center; gap: 8px; min-height: 46px; margin: 8px 0 4px; }
+.cnn-animation-button { position: relative; display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; padding: 0; border: 1px solid #c5d9ce; border-radius: 4px; background: #fff; color: #176653; cursor: pointer; }
+.cnn-animation-button:hover { background: #eff6f1; }
+.cnn-animation-button:focus-visible { outline: 2px solid #176653; outline-offset: 2px; }
+.cnn-animation-button:disabled { opacity: .35; cursor: default; }
+.cnn-animation-button svg { display: block; width: 18px; height: 18px; }
+.cnn-animation-button::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 7px); left: 50%; z-index: 2; transform: translateX(-50%); padding: 5px 8px; background: #263f35; color: #fff; border-radius: 4px; font: 12px/1.5 var(--sans); white-space: nowrap; opacity: 0; pointer-events: none; }
+.cnn-animation-button:hover::after, .cnn-animation-button:focus-visible::after { opacity: 1; }
+.cnn-animation-button:first-child::after { left: 0; transform: none; }
+.cnn-window-counter { min-width: 92px; margin-left: 8px; color: #667f72; font: 13px var(--mono); white-space: nowrap; }
+@media (max-width: 767px) {
+  .cnn-page .intro-slide-heading { gap: 12px; }
+  .cnn-page .intro-slide-heading h2 { font-size: 23px; }
+  .cnn-page .intro-slide-caption { overflow-wrap: anywhere; }
+  .cnn-page .article-section-label { align-items: flex-start; }
+  .cnn-page .article-section-label button { flex-shrink: 0; }
+  .cnn-page .intro-visual { margin: 16px 0 20px; }
+}

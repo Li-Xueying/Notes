@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="description" content="AI 工程学第四讲：自注意力、Transformer、ViT、Swin 与混合专家。" /><title>Transformer 模型 · AI 工程学</title><link rel="stylesheet" href="vendor/katex/katex.min.css" /><link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="transformer-content.css?v=20261009-2" /></head>
+<body class="intro-page cnn-page tf-page"><a class="skip-link" href="#main-content">跳转至正文</a>
+<header class="site-header"><a class="brand" href="index.html" aria-label="AI 工程学课程首页"><span class="brand-mark" aria-hidden="true">⌬</span><span>AI 工程学<small>AI ENGINEERING</small></span></a><nav class="header-nav" aria-label="网站导航"><a href="index.html">课程概览</a><a class="current" href="lectures.html">课程讲义</a><a href="downloads.html">下载课件（PDF）</a><span class="institution">⌂　上海创智学院</span></nav><button class="mobile-menu" type="button" aria-label="打开导航" aria-expanded="false">☰</button></header>
+<div class="app-shell"><aside class="sidebar" aria-label="课程目录"><div class="sidebar-heading">课程讲义 <span>LECTURES</span></div><a class="overview-link" href="lectures.html">◈　课程讲义目录</a><div class="nav-part intro-sidebar-nav"><p>第四讲 <span>ATTENTION</span></p><a href="intro-overview.html#topic-mango"><b>01</b>人工神经网络基础</a><a href="cnn-image-recognition.html#cnn-classification"><b>02</b>CNN 与图像识别</a><a href="rnn-lstm-sequence-modeling.html#rnn-sequence-data"><b>03</b>RNN 与 LSTM</a><a class="active" href="#tf-qkv"><b>04</b>Transformer 模型</a><a href="lectures.html#lecture-5"><b>05</b>自监督学习</a></div><a class="sidebar-resource" href="index.html#assessment">课程考核</a><a class="sidebar-resource" href="index.html#faculty">授课团队</a><a class="sidebar-resource download-resource" href="downloads.html">↓　下载课件</a><div class="sidebar-footer">上海创智学院 <span>2026 秋季</span></div></aside>
+<div class="site-body"><div class="breadcrumb"><span>AI 工程学　›　第四讲　›　Transformer 模型</span><span>Transformer Models</span></div><main id="main-content" class="reading-layout intro-reading-layout"><div class="home-content">
+<header class="course-intro intro-lecture-header"><div class="eyebrow"><i></i>第四讲 · 注意力架构</div><h1>Transformer 模型</h1><p class="english-title">Transformer Models</p><p class="intro-copy">从序列任务出发，逐步建立自注意力、编码器与解码器，再理解语言与视觉模型，以及专家路由与负载均衡。</p><div class="intro-modebar" role="tablist" aria-label="讲义模式"><button class="button primary" type="button" role="tab" aria-selected="true" data-mode-button="read">▣ 阅读模式</button><button class="button secondary" type="button" role="tab" aria-selected="false" data-mode-button="slides">▷ 演示模式</button><span class="intro-page-count">6 个章节 · 33 个主题 · 122 个演示步骤</span></div></header>
+<div id="read-mode" class="intro-mode-panel" role="tabpanel"><section class="intro-topic cnn-topic tf-topic" id="tf-qkv" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 01</span><button type="button" data-present-section="tf-qkv">▷ 演示本节</button></div><h2>从 Seq2Seq 到自注意力</h2><p>机器翻译需要把一个输入序列转成另一个输出序列，例如将“深度学习”翻译成 “Deep Learning”。编码器读取源序列，产生表示；解码器根据这些表示和已有的目标前缀，逐步生成目标序列。两侧的长度可以不同。上一讲用 RNN 完成这个任务，这一讲保持任务与角色，改用 Transformer 组织内部计算。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/transformer-task.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Transformer：序列到序列"><img src="diagrams/transformer/transformer-task.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Transformer：序列到序列。编码输入序列，再生成输出序列" /></a><figcaption>编码输入序列，再生成输出序列</figcaption></figure><p>2017 年的《Attention Is All You Need》提出以注意力为核心的编码器—解码器。先理解位置之间怎样交换信息，再理解完整块怎样堆叠，最后讨论语言、视觉和稀疏专家层。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/transformer-origin.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Attention Is All You Need"><img src="diagrams/transformer/transformer-origin.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Attention Is All You Need。2017 年提出的 Transformer 架构" /></a><figcaption>2017 年提出的 Transformer 架构</figcaption></figure><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/course-route.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：从机制到完整模型，再到专家层"><img src="diagrams/transformer/course-route.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="从机制到完整模型，再到专家层。自注意力 → 编码器 → 解码器 → 语言与视觉 → MoE" /></a><figcaption>自注意力 → 编码器 → 解码器 → 语言与视觉 → MoE</figcaption></figure><p>先看自注意力层的输入输出。输入为一组向量 <span class="cnn-inline-math" data-tex="a_1,\ldots,a_N">a_1,\ldots,a_N</span>，输出为同样多的向量 <span class="cnn-inline-math" data-tex="b_1,\ldots,b_N">b_1,\ldots,b_N</span>。输入可以是词嵌入，也可以是上一隐藏层的输出。逐位置全连接层变换各位置的特征，自注意力让不同位置交换信息，两者可以交替堆叠。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/attention-layer.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：用自注意力交换序列信息"><img src="diagrams/transformer/attention-layer.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="用自注意力交换序列信息。输入或隐藏层中的向量，都可作为序列" /></a><figcaption>输入或隐藏层中的向量，都可作为序列</figcaption></figure><p>只观察第一个输出 <span class="cnn-inline-math" data-tex="b_1">b_1</span>：它需要根据当前输入，决定哪些 <span class="cnn-inline-math" data-tex="a_i">a_i</span> 与自己相关，再汇总这些位置的信息。这就是接下来“打分—权重—汇总”的任务。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/attention-relevance.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：生成 b₁，需要查看哪些 aᵢ？"><img src="diagrams/transformer/attention-relevance.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="生成 b₁，需要查看哪些 aᵢ？。从一个输出位置出发，寻找相关的输入向量" /></a><figcaption>从一个输出位置出发，寻找相关的输入向量</figcaption></figure><p>相关性可以通过点积打分，也可以通过加性打分。两者先将输入映射到用于比较的空间；点积直接相乘求和，加性方式经过可学习的非线性网络。本讲随后采用点积。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/score-functions.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：两种相关性打分方式"><img src="diagrams/transformer/score-functions.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="两种相关性打分方式。点积与加性打分" /></a><figcaption>点积与加性打分</figcaption></figure><p>第一个位置经过查询投影得到 <span class="cnn-inline-math" data-tex="q_1">q_1</span>，各位置经过键投影得到 <span class="cnn-inline-math" data-tex="k_i">k_i</span>。<span class="cnn-inline-math" data-tex="q_1">q_1</span> 与每个 <span class="cnn-inline-math" data-tex="k_i">k_i</span> 的点积表示兼容程度。分数可以为负，也不要求和为 1，此时还不是概率。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/query-key.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：固定 q₁，与各位置的 kᵢ 匹配"><img src="diagrams/transformer/query-key.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="固定 q₁，与各位置的 kᵢ 匹配。q₁ = Wq a₁；kᵢ = Wk aᵢ" /></a><figcaption>q₁ = Wq a₁；kᵢ = Wk aᵢ</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-weighted-sum" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 02</span><button type="button" data-present-section="tf-weighted-sum">▷ 演示本节</button></div><h2>归一化权重与 Value 汇总</h2><p>被查询位置包含 <span class="cnn-inline-math" data-tex="a_1">a_1</span> 自己。固定一个查询，把它与四个键得到的分数做 Softmax，便得到一组非负且和为 1 的权重。每个输入还经过值投影得到 <span class="cnn-inline-math" data-tex="v_i">v_i</span>，用于提供实际被汇总的内容。权重与对应的值逐项相乘，再求和得到 <span class="cnn-inline-math" data-tex="b_1">b_1</span>。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="attention-vector"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="\alpha_{1i}=\frac{\exp(q_1^\top k_i)}{\sum_j\exp(q_1^\top k_j)},\qquad b_1=\sum_i\alpha_{1i}v_i"><pre>\alpha_{1i}=\frac{\exp(q_1^\top k_i)}{\sum_j\exp(q_1^\top k_j)},\qquad b_1=\sum_i\alpha_{1i}v_i</pre></div><p>图中的标量值只是帮助核对加权和的数值例子；实际 <span class="cnn-inline-math" data-tex="v_i">v_i</span> 和 <span class="cnn-inline-math" data-tex="b_1">b_1</span> 都是向量。同一权重作用于对应值向量的全部分量。</p><p>换到第二个位置，使用 <span class="cnn-inline-math" data-tex="q_2">q_2</span> 对同一组键重新打分，再汇总同一组值。键和值可以复用，关注分布由新的查询决定。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/attention-next-query.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：换成 q₂，重新计算一组权重"><img src="diagrams/transformer/attention-next-query.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="换成 q₂，重新计算一组权重。同一 K、V；另一个查询，另一个输出" /></a><figcaption>同一 K、V；另一个查询，另一个输出</figcaption></figure><p>这些输出可以同时计算。某个位置不需要等待前一位置的输出，因而能将整段序列的计算写成并行矩阵运算。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/attention-parallel.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：所有位置可以并行聚合"><img src="diagrams/transformer/attention-parallel.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="所有位置可以并行聚合。a₁…a₄ → b₁…b₄" /></a><figcaption>a₁…a₄ → b₁…b₄</figcaption></figure><div class="cnn-lab tf-lab" id="attention-lab"><div class="cnn-lab-heading"><h3>匹配分数与加权结果</h3><output id="attention-output"></output></div><div class="transformer-slider-list"><label>k1<input type="range" min="-4" max="4" value="2" step="0.1" data-attention-score data-value="2" aria-label="对 k1 的匹配分数"><b>2.0</b></label><label>k2<input type="range" min="-4" max="4" value="1" step="0.1" data-attention-score data-value="-1" aria-label="对 k2 的匹配分数"><b>1.0</b></label><label>k3<input type="range" min="-4" max="4" value="0" step="0.1" data-attention-score data-value="1" aria-label="对 k3 的匹配分数"><b>0.0</b></label><label>k4<input type="range" min="-4" max="4" value="-1" step="0.1" data-attention-score data-value="0" aria-label="对 k4 的匹配分数"><b>-1.0</b></label></div><div class="transformer-weight-row" id="attention-weights" aria-live="polite"></div><p>示例 Value：[2、−1、1、0]；输出为归一化权重与对应值的加权和。</p></div></section><section class="intro-topic cnn-topic tf-topic" id="tf-scaled-attention" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 03</span><button type="button" data-present-section="tf-scaled-attention">▷ 演示本节</button></div><h2>矩阵计算与缩放点积注意力</h2><p>将 <span class="cnn-inline-math" data-tex="N">N</span> 个输入按行放入 <span class="cnn-inline-math" data-tex="X\in\mathbb R^{N\times D}">X\in\mathbb R^{N\times D}</span>。三个投影在所有位置共享参数，得到查询、键和值矩阵。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/qkv-matrices.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：把所有投影写成矩阵"><img src="diagrams/transformer/qkv-matrices.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="把所有投影写成矩阵。X → Q、K、V" /></a><figcaption>X → Q、K、V</figcaption></figure><div class="cnn-equation" data-tex="Q=XW_Q\in\mathbb R^{N\times d_k},\quad K=XW_K\in\mathbb R^{N\times d_k},\quad V=XW_V\in\mathbb R^{N\times d_v}"><pre>Q=XW_Q\in\mathbb R^{N\times d_k},\quad K=XW_K\in\mathbb R^{N\times d_k},\quad V=XW_V\in\mathbb R^{N\times d_v}</pre></div><p><span class="cnn-inline-math" data-tex="QK^\top">QK^\top</span> 的第 <span class="cnn-inline-math" data-tex="i">i</span> 行包含查询 <span class="cnn-inline-math" data-tex="q_i">q_i</span> 对全部键的分数，第 <span class="cnn-inline-math" data-tex="j">j</span> 列对应被查询位置 <span class="cnn-inline-math" data-tex="j">j</span>。逐行 Softmax 后，每行权重和为 1；再乘 <span class="cnn-inline-math" data-tex="V">V</span>，每行就成为对应输出位置的加权和。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="attention-matrix"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><p>维度 <span class="cnn-inline-math" data-tex="d_k">d_k</span> 较大时，点积的典型幅值会增大，Softmax 更容易产生过于集中的分布。因此标准缩放点积注意力在归一化之前除以 <span class="cnn-inline-math" data-tex="\sqrt{d_k}">\sqrt{d_k}</span>。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/scaled-attention.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：加入缩放，得到标准公式"><img src="diagrams/transformer/scaled-attention.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="加入缩放，得到标准公式。Attention(Q,K,V) = softmax(QKᵀ/√dₖ)V" /></a><figcaption>Attention(Q,K,V) = softmax(QKᵀ/√dₖ)V</figcaption></figure><div class="cnn-equation" data-tex="\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V\in\mathbb R^{N\times d_v}"><pre>\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V\in\mathbb R^{N\times d_v}</pre></div><p>回到语言例子：“The animal didn't cross the street because it was too tired”。处理 “it” 时，可以关注 “animal”，让代词的表示纳入它所指代对象的上下文。沿图中的连线观察，这个例子把抽象权重对应到了具体的词间关系。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/animal-it.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：it 指代 animal：关注上下文"><img src="diagrams/transformer/animal-it.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="it 指代 animal：关注上下文。The animal … because it was too tired" /></a><figcaption>The animal … because it was too tired</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-multi-head" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 04</span><button type="button" data-present-section="tf-multi-head">▷ 演示本节</button></div><h2>多头注意力：多个相关性子空间</h2><p>一个位置可能需要同时利用不同关系。多头注意力为各头提供不同的投影，使各头独立打分、归一化和汇总。两头示例先计算第一头的输出，再加入第二头的输出。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/multi-head-branches.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：两头示例：分别计算关系"><img src="diagrams/transformer/multi-head-branches.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="两头示例：分别计算关系。每个头独立投影和聚合" /></a><figcaption>每个头独立投影和聚合</figcaption></figure><p>把各头结果拼接，再做输出投影 <span class="cnn-inline-math" data-tex="W_O">W_O</span>，映射回模型维度。以 <span class="cnn-inline-math" data-tex="h">h</span> 个头为例：</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/multi-head-merge.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：拼接各头，再做输出投影"><img src="diagrams/transformer/multi-head-merge.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="拼接各头，再做输出投影。Concat(head₁,…,headₕ)Wᴼ" /></a><figcaption>Concat(head₁,…,headₕ)Wᴼ</figcaption></figure><div class="cnn-equation" data-tex="\operatorname{head}_r=\operatorname{Attention}(XW_Q^{(r)},XW_K^{(r)},XW_V^{(r)}),\qquad \operatorname{MHA}(X)=\operatorname{Concat}(\operatorname{head}_1,\ldots,\operatorname{head}_h)W_O"><pre>\operatorname{head}_r=\operatorname{Attention}(XW_Q^{(r)},XW_K^{(r)},XW_V^{(r)}),\qquad \operatorname{MHA}(X)=\operatorname{Concat}(\operatorname{head}_1,\ldots,\operatorname{head}_h)W_O</pre></div><p>“it” 的表示可同时纳入 “animal” 和 “tired” 的信息。两头与七头的原图展示不同关注连线；不同头可以学到不同关系，不必事先为每头规定一种固定语法职责。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/multi-head-it.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：it 同时关注 animal 和 tired"><img src="diagrams/transformer/multi-head-it.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="it 同时关注 animal 和 tired。对比 2 个头与 7 个头的关注连线" /></a><figcaption>对比 2 个头与 7 个头的关注连线</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-position" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 05</span><button type="button" data-present-section="tf-position">▷ 演示本节</button></div><h2>位置编码补回顺序</h2><p>仅有内容打分时，同时重排输入位置，会相应重排输出；模型缺少区分绝对次序的额外信号。因此在内容向量中加入位置向量 <span class="cnn-inline-math" data-tex="e_i">e_i</span>，让同一个词出现在不同位置时具有不同输入表示。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/position.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：给每个位置加入位置向量"><img src="diagrams/transformer/position.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="给每个位置加入位置向量。内容向量 aᵢ + 位置向量 eᵢ" /></a><figcaption>内容向量 aᵢ + 位置向量 eᵢ</figcaption></figure><p>位置向量可以手工设计，也可以从数据中学习。原图每列代表一个位置向量，各行是它的不同分量。常用正弦余弦方案为不同频率的组合；后面的 ViT 则采用可学习位置嵌入。</p></section><section class="intro-topic cnn-topic tf-topic" id="tf-comparisons" data-topic="tf-attention"><div class="article-section-label"><span>自注意力 / 06</span><button type="button" data-present-section="tf-comparisons">▷ 演示本节</button></div><h2>自注意力与 CNN、RNN</h2><p>先比较连接范围。卷积采用局部感受野与共享核；全局自注意力允许所有位置直接交互，并由输入内容决定各连接的权重。它们都能聚合多个位置，但具有不同的参数形式与结构先验。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/cnn-receptive-field.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：固定局部连接与内容相关连接"><img src="diagrams/transformer/cnn-receptive-field.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="固定局部连接与内容相关连接。CNN 的局部共享核；注意力的输入相关权重" /></a><figcaption>CNN 的局部共享核；注意力的输入相关权重</figcaption></figure><p>局部性和平移等变等先验，常能帮助 CNN 在较少数据时学习。实验图随预训练样本数变化，显示注意力模型在更大数据条件下的表现变化。横轴数据规模、模型配置与训练方式需要一起读取。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/attention-data.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：结构先验与数据规模"><img src="diagrams/transformer/attention-data.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="结构先验与数据规模。实验中，小数据和大数据条件下的表现不同" /></a><figcaption>实验中，小数据和大数据条件下的表现不同</figcaption></figure><p>再比较时间路径。RNN 逐步更新状态，远处信息需穿过多个递推步；自注意力直接连接远处位置，而且整段输入已知时可并行计算。自回归生成仍要等待前一个输出，训练中的序列并行与推理中的逐步生成应分开理解。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/rnn-comparison.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：串行递推与并行交互"><img src="diagrams/transformer/rnn-comparison.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="串行递推与并行交互。RNN 沿时间传递；注意力直接连接远处位置" /></a><figcaption>RNN 沿时间传递；注意力直接连接远处位置</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-encoder-block" data-topic="tf-encoder"><div class="article-section-label"><span>编码器 / 07</span><button type="button" data-present-section="tf-encoder-block">▷ 演示本节</button></div><h2>编码器块的完整路径</h2><p>编码器把 <span class="cnn-inline-math" data-tex="x_1,\ldots,x_N">x_1,\ldots,x_N</span> 转成 <span class="cnn-inline-math" data-tex="h_1,\ldots,h_N">h_1,\ldots,h_N</span>。任务是为每个位置生成结合上下文的表示，输入输出位置一一对应。这个角色可以由 RNN、CNN 或 Transformer 实现，本讲使用 Transformer 编码器。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/encoder-role.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：编码器：序列输入，序列表示输出"><img src="diagrams/transformer/encoder-role.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="编码器：序列输入，序列表示输出。x₁…xₙ → h₁…hₙ" /></a><figcaption>x₁…xₙ → h₁…hₙ</figcaption></figure><p>一个基本块先用自注意力交换位置之间的信息，再用共享的逐位置 FFN 变换每个向量。多个块逐层堆叠，表示不断更新；不同层通常拥有各自的参数。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/encoder-stack.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：逐层叠加编码器块"><img src="diagrams/transformer/encoder-stack.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="逐层叠加编码器块。每层先交换信息，再逐位置变换" /></a><figcaption>每层先交换信息，再逐位置变换</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-residual-norm" data-topic="tf-encoder"><div class="article-section-label"><span>编码器 / 08</span><button type="button" data-present-section="tf-residual-norm">▷ 演示本节</button></div><h2>残差、前馈网络与层归一化</h2><p>完整块还需要残差与归一化。以原始 Post-LN 布局为例，注意力输出与输入相加后做 LayerNorm；FFN 输出再次与其输入相加，再归一化。残差建立直接的信息与梯度路径。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/encoder-residual.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：把注意力子层补成完整块"><img src="diagrams/transformer/encoder-residual.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="把注意力子层补成完整块。Self-attention → Add &amp; Norm → FFN → Add &amp; Norm" /></a><figcaption>Self-attention → Add &amp; Norm → FFN → Add &amp; Norm</figcaption></figure><div class="cnn-equation" data-tex="U=\operatorname{LN}(X+\operatorname{MHA}(X)),\qquad H=\operatorname{LN}(U+\operatorname{FFN}(U))"><pre>U=\operatorname{LN}(X+\operatorname{MHA}(X)),\qquad H=\operatorname{LN}(U+\operatorname{FFN}(U))</pre></div><p>FFN 对每个位置应用相同的两层变换：先扩大中间维度并经过非线性，再映射回 <span class="cnn-inline-math" data-tex="D">D</span> 维。它沿特征维计算，位置间的信息交换由注意力负责。</p><p>LayerNorm 对一个向量的特征求均值和方差，并包含可学习的缩放与偏移：</p><div class="cnn-equation" data-tex="\operatorname{LN}(z)_j=\gamma_j\frac{z_j-\mu}{\sqrt{\sigma^2+\epsilon}}+\beta_j"><pre>\operatorname{LN}(z)_j=\gamma_j\frac{z_j-\mu}{\sqrt{\sigma^2+\epsilon}}+\beta_j</pre></div><p>把这些组件放回编码器，可为全部位置产生上下文化表示。BERT 属于使用这种编码器结构的模型家族，稍后再比较完整任务形式。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/encoder-bert.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：完整编码器也用于 BERT"><img src="diagrams/transformer/encoder-bert.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="完整编码器也用于 BERT。注意力、FFN、残差和归一化重复堆叠" /></a><figcaption>注意力、FFN、残差和归一化重复堆叠</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-ln-variants" data-topic="tf-encoder"><div class="article-section-label"><span>编码器 / 09</span><button type="button" data-present-section="tf-ln-variants">▷ 演示本节</button></div><h2>Pre-LN、Post-LN 与归一化轴</h2><p>Post-LN 在残差相加之后归一化，Pre-LN 先归一化模块输入，再将模块输出加入残差主路。沿箭头观察，Pre-LN 的主残差路径可以直接保留 <span class="cnn-inline-math" data-tex="x">x</span>。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/ln-order.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：归一化放在模块之前还是之后"><img src="diagrams/transformer/ln-order.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="归一化放在模块之前还是之后。Post-LN: LN(x+F(x))；Pre-LN: x+F(LN(x))" /></a><figcaption>Post-LN: LN(x+F(x))；Pre-LN: x+F(LN(x))</figcaption></figure><div class="cnn-equation" data-tex="\text{Post-LN: }\operatorname{LN}(x+F(x)),\qquad \text{Pre-LN: }x+F(\operatorname{LN}(x))"><pre>\text{Post-LN: }\operatorname{LN}(x+F(x)),\qquad \text{Pre-LN: }x+F(\operatorname{LN}(x))</pre></div><p>归一化位置会影响梯度与训练配置，不能单凭名字断定某一种布局在所有阶段都更稳定。深度、初始化、学习率和 warmup 等共同影响表现。</p><p>接着比较统计轴。图像张量记为 <span class="cnn-inline-math" data-tex="(N,C,H,W)">(N,C,H,W)</span>：BatchNorm 每通道聚合 <span class="cnn-inline-math" data-tex="N,H,W">N,H,W</span>；图示 LayerNorm 对单样本聚合 <span class="cnn-inline-math" data-tex="C,H,W">C,H,W</span>；InstanceNorm 对单样本、单通道聚合 <span class="cnn-inline-math" data-tex="H,W">H,W</span>；GroupNorm 对单样本的一组通道聚合组内通道及 <span class="cnn-inline-math" data-tex="H,W">H,W</span>。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/norm-axes.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：不同归一化方法统计哪些元素"><img src="diagrams/transformer/norm-axes.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="不同归一化方法统计哪些元素。Batch、Layer、Instance、Group Norm" /></a><figcaption>Batch、Layer、Instance、Group Norm</figcaption></figure><p>语言 Transformer 常用的 LayerNorm 对单个 token 的 <span class="cnn-inline-math" data-tex="D">D</span> 个特征统计，具体归一化维度由张量形状与配置决定。理解统计集合比记方法名称更重要。</p></section><section class="intro-topic cnn-topic tf-topic" id="tf-autoregressive" data-topic="tf-decoder"><div class="article-section-label"><span>解码器 / 10</span><button type="button" data-present-section="tf-autoregressive">▷ 演示本节</button></div><h2>自回归解码与停止条件</h2><p>解码器根据输入条件和已经生成的前缀，预测下一个 token。这里先理解生成过程，随后才拆开它内部的遮罩与交叉注意力。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-role.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：解码器预测下一个 token"><img src="diagrams/transformer/decoder-role.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="解码器预测下一个 token。输入条件 + 已有前缀 → 词表分布" /></a><figcaption>输入条件 + 已有前缀 → 词表分布</figcaption></figure><p>从特殊符号 START（也记为 BOS）开始，模型输出整个词表上的分布。示例中“深”的概率为 0.8，“习”为 0.1，其余候选占据剩余概率；选择最大项便得到第一个字“深”。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-first.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：从 START 生成第一个字"><img src="diagrams/transformer/decoder-first.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="从 START 生成第一个字。分布示例：深 0.8；习 0.1" /></a><figcaption>分布示例：深 0.8；习 0.1</figcaption></figure><p>将“深”接回输入，再预测“度”；把“度”加入前缀，再预测“学”。输出不断成为下一次计算的条件。如果第二步错误生成“渡”，后面读取的也会是“渡”，从而影响后续预测。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="autoregressive-feedback"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><p>目标长度事先未知。生成完“深度学习”后，模型仍可能继续生成“惯”等字符，因此需要明确的停止预测。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-length.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：输出长度事先未知"><img src="diagrams/transformer/decoder-length.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="输出长度事先未知。生成完“深度学习”，仍可能继续" /></a><figcaption>生成完“深度学习”，仍可能继续</figcaption></figure><p>将 END（EOS）加入词表。当下一次预测选中 EOS，当前序列结束。PAD 用于批次长度对齐；工程上还可以设置最大生成长度。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-stop.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：将 END 加入词表"><img src="diagrams/transformer/decoder-stop.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="将 END 加入词表。生成 END 后结束当前序列" /></a><figcaption>生成 END 后结束当前序列</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-causal-mask" data-topic="tf-decoder"><div class="article-section-label"><span>解码器 / 11</span><button type="button" data-present-section="tf-causal-mask">▷ 演示本节</button></div><h2>因果遮罩怎样阻止未来泄漏</h2><p>暂时略去编码器输入，观察解码器自己的路径。它与编码器都包含自注意力、FFN、残差和归一化，但生成时只能读取已有的目标前缀。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-block.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：先隔离解码器自身的路径"><img src="diagrams/transformer/decoder-block.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="先隔离解码器自身的路径。Masked self-attention + FFN" /></a><figcaption>Masked self-attention + FFN</figcaption></figure><p>第 <span class="cnn-inline-math" data-tex="i">i</span> 个目标位置只能读取 <span class="cnn-inline-math" data-tex="j\le i">j\le i</span> 的输入位置。训练时整段真实目标已知，因果遮罩也要阻止模型访问未来答案，使训练中的可见范围与生成过程一致。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="causal-mask"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="M_{ij}=\begin{cases}0,&amp;j\le i\\-\infty,&amp;j&gt;i\end{cases},\qquad A=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)"><pre>M_{ij}=\begin{cases}0,&amp;j\le i\\-\infty,&amp;j&gt;i\end{cases},\qquad A=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)</pre></div><p>遮挡发生在 Softmax 之前，负无穷对应归一化后的零权重。输入目标右移一位后，第 <span class="cnn-inline-math" data-tex="i">i</span> 个输入位置用于预测下一词，读取自身输入不会读到该位置的预测标签。</p><p>原图还比较滑动窗口与分块遮罩。它们限制历史信息的访问范围，具有不同连接结构；padding mask 则另行排除用于补齐长度的位置。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/mask-patterns.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：因果、滑动窗口与分块遮罩"><img src="diagrams/transformer/mask-patterns.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="因果、滑动窗口与分块遮罩。三种连接范围，三种信息约束" /></a><figcaption>三种连接范围，三种信息约束</figcaption></figure><div class="cnn-lab tf-lab" id="causal-mask-lab"><div class="cnn-lab-heading"><h3>目标位置的可见前缀</h3><b id="mask-step"></b></div><div class="cnn-segmented transformer-mask-buttons" role="group" aria-label="选择查询位置"><button type="button" data-mask-step="0">BOS</button><button type="button" data-mask-step="1">深</button><button type="button" data-mask-step="2">度</button><button type="button" data-mask-step="3">学</button></div><div class="transformer-mask-stage" id="mask-stage" aria-live="polite"></div><p id="mask-message"></p></div></section><section class="intro-topic cnn-topic tf-topic" id="tf-ar-nar" data-topic="tf-decoder"><div class="article-section-label"><span>解码器 / 12</span><button type="button" data-present-section="tf-ar-nar">▷ 演示本节</button></div><h2>自回归与非自回归</h2><p>自回归（AR）生成依次读取已有输出。非自回归（NAR）尝试同时预测多个目标位置，但必须先决定输出槽位：可以另设长度预测器，也可以生成足够长的序列，在 END 之后忽略剩余位置。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/nar-length.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：并行预测多个位置，如何决定长度？"><img src="diagrams/transformer/nar-length.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="并行预测多个位置，如何决定长度？。另设长度预测器，或保留足够输出槽位" /></a><figcaption>另设长度预测器，或保留足够输出槽位</figcaption></figure><p>并行生成可降低时间链上的等待，在 TTS 等任务中有实际用途。困难是同一个输入可能对应多种合理输出，若各位置独立选择不同答案模式，整句可能不一致。质量与速度的取舍要结合任务和模型设计。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/nar-multimodality.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：并行速度与输出一致性的取舍"><img src="diagrams/transformer/nar-multimodality.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="并行速度与输出一致性的取舍。同一输入可能对应多种合理输出" /></a><figcaption>同一输入可能对应多种合理输出</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-cross-attention" data-topic="tf-encoder-decoder"><div class="article-section-label"><span>编码器与解码器 / 13</span><button type="button" data-present-section="tf-cross-attention">▷ 演示本节</button></div><h2>交叉注意力连接输入与输出</h2><p>现在把编码器接回解码器。完整模型包含三类注意力：编码器的双向自注意力、解码器的因果自注意力，以及读取源表示的交叉注意力。交叉注意力中的查询来自目标侧状态，键和值来自编码器输出。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/cross-role.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：编码器输出被解码器读取"><img src="diagrams/transformer/cross-role.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="编码器输出被解码器读取。Q 来自目标侧；K、V 来自源侧" /></a><figcaption>Q 来自目标侧；K、V 来自源侧</figcaption></figure><p>固定当前目标查询，与各个源位置的键打分，再按权重汇总源值。得到的源信息与目标状态共同用于预测。示例先从 START 预测“机”，加入“机”后，更新后的查询重新读取源序列。图中的小型权重分布用于示意两次查询的变化。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="cross-process"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="Q=H_{\mathrm{dec}}W_Q,\quad K=H_{\mathrm{enc}}W_K,\quad V=H_{\mathrm{enc}}W_V"><pre>Q=H_{\mathrm{dec}}W_Q,\quad K=H_{\mathrm{enc}}W_K,\quad V=H_{\mathrm{enc}}W_V</pre></div><p>若目标长度为 <span class="cnn-inline-math" data-tex="T">T</span>、源长度为 <span class="cnn-inline-math" data-tex="S">S</span>，权重矩阵为 <span class="cnn-inline-math" data-tex="T\times S">T\times S</span>，每行是某个目标位置对全部源位置的关注分布。交叉注意力本身不需要按源位置使用因果遮罩，源输入通常已完整可用。</p><p>语音识别的原图显示频谱时间片段与输出字符 h、o、w 等的软对齐。这个例子来自 Listen, Attend and Spell，说明跨序列读取机制也能用于其他网络。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/speech-alignment.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：语音与输出字符的软对齐"><img src="diagrams/transformer/speech-alignment.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="语音与输出字符的软对齐。频谱时间片段 ↔ h、o、w 等字符" /></a><figcaption>频谱时间片段 ↔ h、o、w 等字符</figcaption></figure><p>标准架构以编码器表示作为解码器各层的键和值。后续研究还比较同层、并行、细粒度、全连接和自适应的跨层连接；图中连线的层级不同，读取信息的来源也不同。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/cross-layers.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：交叉注意力可以连接不同层"><img src="diagrams/transformer/cross-layers.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="交叉注意力可以连接不同层。同层、并行、细粒度、全连接与自适应连接" /></a><figcaption>同层、并行、细粒度、全连接与自适应连接</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-training-inference" data-topic="tf-encoder-decoder"><div class="article-section-label"><span>编码器与解码器 / 14</span><button type="button" data-present-section="tf-training-inference">▷ 演示本节</button></div><h2>训练、推理与 Teacher Forcing</h2><p>训练样本同时提供源输入与真实目标。第一个预测位置的真实标签为“深”，用它监督模型输出的词表分布，最小化交叉熵。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/training-loss.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：用真实下一词监督预测分布"><img src="diagrams/transformer/training-loss.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="用真实下一词监督预测分布。深的目标概率为 1；最小化交叉熵" /></a><figcaption>深的目标概率为 1；最小化交叉熵</figcaption></figure><p>整段训练将目标右移一位作为解码器输入：输入为 <code>BOS 深 度 学 习</code>，标签为 <code>深 度 学 习 EOS</code>。每个输入位置预测紧随其后的真实 token。因果遮罩保证只读取对应前缀，各位置损失仍可并行计算。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/teacher-forcing.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：真实目标右移一位作为输入"><img src="diagrams/transformer/teacher-forcing.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="真实目标右移一位作为输入。输入 BOS 深 度 学 习；目标 深 度 学 习 EOS" /></a><figcaption>输入 BOS 深 度 学 习；目标 深 度 学 习 EOS</figcaption></figure><div class="cnn-equation" data-tex="L=-\sum_{t=1}^{T}\log P(y_t\mid y_{&lt;t},x)"><pre>L=-\sum_{t=1}^{T}\log P(y_t\mid y_{&lt;t},x)</pre></div><p>这就是 Teacher Forcing：训练时使用真实前缀。推理时只能使用模型生成的前缀，稍后再讨论这个分布差异。</p></section><section class="intro-topic cnn-topic tf-topic" id="tf-beam-search" data-topic="tf-encoder-decoder"><div class="article-section-label"><span>编码器与解码器 / 15</span><button type="button" data-present-section="tf-beam-search">▷ 演示本节</button></div><h2>束搜索：扩展、剪枝与回溯</h2><p>逐步选择最大概率 token，是贪心解码。它不保证整条路径概率最大：原两分支例子中，贪心路径概率为 <span class="cnn-inline-math" data-tex="0.6\times0.6\times0.4=0.144">0.6\times0.6\times0.4=0.144</span>，另一条路径为 <span class="cnn-inline-math" data-tex="0.4\times0.9\times0.9=0.324">0.4\times0.9\times0.9=0.324</span>。较弱的第一步，可能通向更强的后续路径。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/greedy-tree.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：局部最优不保证整条路径最优"><img src="diagrams/transformer/greedy-tree.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="局部最优不保证整条路径最优。贪心：0.6×0.6×0.4；另一条：0.4×0.9×0.9" /></a><figcaption>贪心：0.6×0.6×0.4；另一条：0.4×0.9×0.9</figcaption></figure><p>穷举长度 <span class="cnn-inline-math" data-tex="T">T</span> 的序列约有 <span class="cnn-inline-math" data-tex="|V|^T">|V|^T</span> 条路径。束搜索保留 <span class="cnn-inline-math" data-tex="k">k</span> 个高分前缀，每轮扩展后，再全局保留 <span class="cnn-inline-math" data-tex="k">k</span> 个候选。比较的是累计对数概率，越大越好，即负值越接近零越好。</p><div class="cnn-equation" data-tex="\operatorname{score}(y_{1:t})=\sum_{i=1}^{t}\log P(y_i\mid y_{&lt;i},x)"><pre>\operatorname{score}(y_{1:t})=\sum_{i=1}^{t}\log P(y_i\mid y_{&lt;i},x)</pre></div><figure class="intro-visual"><div class="tf-sequence" data-sequence="beam-example"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><p>示例束宽为 2，先保留 he 与 I，再扩展成 he hit、he struck、I was、I got。全局剪枝保留 I was（−1.6）与 he hit（−1.7），随后继续扩展与剪枝，最终回溯得到 he hit me with a pie，示例分数为 −4.3。</p><p>束搜索是近似搜索；已经剪掉的前缀不会自动恢复。实际生成还需要维护完成假设、EOS 停止条件，并考虑不同长度之间的分数比较。</p></section><section class="intro-topic cnn-topic tf-topic" id="tf-generation" data-topic="tf-encoder-decoder"><div class="article-section-label"><span>编码器与解码器 / 16</span><button type="button" data-present-section="tf-generation">▷ 演示本节</button></div><h2>采样、BLEU 算例与评价优化</h2><p>开放生成可能存在许多合理答案。比较束搜索和随机采样的文本输出，可以看到只追求高概率路径可能产生机械重复，采样有助于保留生成多样性。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/sampling.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：开放生成需要保留随机性"><img src="diagrams/transformer/sampling.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="开放生成需要保留随机性。比较搜索与采样的文本输出" /></a><figcaption>比较搜索与采样的文本输出</figcaption></figure><p>BLEU 比较候选与参考译文的 n-gram。精确率使用裁剪计数：一个候选短语的匹配数量，不能超过参考中的出现次数。再乘短句惩罚 BP，防止仅输出少量高频匹配词。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/bleu-definition.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：BLEU：n-gram 精确率与短句惩罚"><img src="diagrams/transformer/bleu-definition.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="BLEU：n-gram 精确率与短句惩罚。词串匹配 + Brevity Penalty" /></a><figcaption>词串匹配 + Brevity Penalty</figcaption></figure><div class="cnn-equation" data-tex="\mathrm{BLEU}=\mathrm{BP}\exp\left(\sum_{n=1}^{m}w_n\log p_n\right),\qquad \mathrm{BP}=\begin{cases}1,&amp;c&gt;r\\\exp(1-r/c),&amp;c\le r\end{cases}"><pre>\mathrm{BLEU}=\mathrm{BP}\exp\left(\sum_{n=1}^{m}w_n\log p_n\right),\qquad \mathrm{BP}=\begin{cases}1,&amp;c&gt;r\\\exp(1-r/c),&amp;c\le r\end{cases}</pre></div><p>具体看候选 “the cat sat on the mat”，参考 “the cat is on the mat”。一元匹配为 5/6；二元匹配为 the cat、on the、the mat，共 3/5。两句长度均为 6，所以 BP=1。只取一元和二元、各占一半权重时：</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/bleu-example.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：the cat sat on the mat 的算例"><img src="diagrams/transformer/bleu-example.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="the cat sat on the mat 的算例。参考：the cat is on the mat" /></a><figcaption>参考：the cat is on the mat</figcaption></figure><div class="cnn-equation" data-tex="\mathrm{BLEU}_2=\exp\left(\frac12\log\frac56+\frac12\log\frac35\right)=\sqrt{\frac12}\approx0.7071"><pre>\mathrm{BLEU}_2=\exp\left(\frac12\log\frac56+\frac12\log\frac35\right)=\sqrt{\frac12}\approx0.7071</pre></div><p>常见 BLEU 计算综合一至四元，这个二元例子用于演示步骤。BLEU 衡量词串重合，不能单独代表全部语义质量。</p><p>若希望直接优化序列级评价指标，离散选词让普通反向传播难以直接穿过解码结果。可以把评价分数作为序列奖励，采用强化学习式优化等方法；奖励设计和估计方式会影响训练。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/metric-optimization.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：训练目标能否直接对应评价指标？"><img src="diagrams/transformer/metric-optimization.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="训练目标能否直接对应评价指标？。离散生成使 BLEU 难以直接反向传播" /></a><figcaption>离散生成使 BLEU 难以直接反向传播</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-exposure-bias" data-topic="tf-encoder-decoder"><div class="article-section-label"><span>编码器与解码器 / 17</span><button type="button" data-present-section="tf-exposure-bias">▷ 演示本节</button></div><h2>前缀分布差异与完整结构回顾</h2><p>原错误例子中，推理生成“渡”后，后续读取“深渡”；Teacher Forcing 训练却读取“深度”。训练前缀来自数据，推理前缀来自模型，这个差异称为 exposure bias。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/exposure-bias.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：模型生成“渡”，真实前缀却是“度”"><img src="diagrams/transformer/exposure-bias.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="模型生成“渡”，真实前缀却是“度”。训练读取真值，推理读取自己的输出" /></a><figcaption>训练读取真值，推理读取自己的输出</figcaption></figure><p>Scheduled Sampling 尝试在训练中混合真实输出与模型输出。相关设计包括原始方案、适用于 Transformer 的方案，以及并行方案；它们改变训练输入与计算路径，需要结合训练设置选择。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/scheduled-sampling.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：尝试混合真实前缀与模型前缀"><img src="diagrams/transformer/scheduled-sampling.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="尝试混合真实前缀与模型前缀。Scheduled Sampling 的三种相关方案" /></a><figcaption>Scheduled Sampling 的三种相关方案</figcaption></figure><p>把机制重新组装：位置表示进入两侧网络，编码器保存源序列信息，解码器读取已有前缀，再通过交叉注意力读取源表示，最终输出下一词分布。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/transformer-summary.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：回到完整 Transformer"><img src="diagrams/transformer/transformer-summary.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="回到完整 Transformer。源编码 → 交叉读取 → 目标生成" /></a><figcaption>源编码 → 交叉读取 → 目标生成</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-families" data-topic="tf-models"><div class="article-section-label"><span>语言与视觉模型 / 18</span><button type="button" data-present-section="tf-families">▷ 演示本节</button></div><h2>Encoder-only、Encoder–Decoder、Decoder-only</h2><p>用输入输出角色与可见范围比较三类架构：Encoder-only 为输入各位置生成双向表示；Encoder–Decoder 用源序列条件生成目标序列；Decoder-only 将提示和输出放在同一个因果序列中续写。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/model-families.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：三种 Transformer 架构"><img src="diagrams/transformer/model-families.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="三种 Transformer 架构。BERT、T5、GPT" /></a><figcaption>BERT、T5、GPT</figcaption></figure><p>BERT 是编码器类型，可利用上下文化表示完成情感、主题分类等理解任务，也可以接入不同任务头。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/bert.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Encoder-only：上下文化表示"><img src="diagrams/transformer/bert.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Encoder-only：上下文化表示。双向读取输入，用于理解与分类" /></a><figcaption>双向读取输入，用于理解与分类</figcaption></figure><p>T5 属于编码器—解码器类型，适合需要理解输入并产生相关输出的任务，例如翻译与问答。源输入先编码，目标侧随后读取源表示。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/t5.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Encoder–Decoder：条件生成"><img src="diagrams/transformer/t5.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Encoder–Decoder：条件生成。理解源输入，再生成相关输出" /></a><figcaption>理解源输入，再生成相关输出</figcaption></figure><p>GPT 属于解码器类型，沿前缀预测下一 token。提示位于已有上下文内，开放生成与其他任务都可以按序列续写表达。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/gpt.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Decoder-only：前缀续写"><img src="diagrams/transformer/gpt.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Decoder-only：前缀续写。因果注意力 + 下一词预测" /></a><figcaption>因果注意力 + 下一词预测</figcaption></figure><p>解码器类型的优势包括统一序列目标、复用主干和使用 KV cache。推理缓存各层已经计算的历史键和值，减少下一步的重复计算；缓存也随序列长度和批大小占用空间。架构选择还应结合任务、训练预算与生成需求。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/decoder-choice.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：统一序列建模与 KV cache"><img src="diagrams/transformer/decoder-choice.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="统一序列建模与 KV cache。训练目标、参数复用与推理缓存" /></a><figcaption>训练目标、参数复用与推理缓存</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-vit-tokens" data-topic="tf-models"><div class="article-section-label"><span>语言与视觉模型 / 19</span><button type="button" data-present-section="tf-vit-tokens">▷ 演示本节</button></div><h2>ViT：图像如何成为序列</h2><p>图像模型需要处理二维空间。CNN 具有局部性和平移等变先验；Transformer 可以建立长距离交互，但全局连接计算较大。ViT 先把图像转换成可送入标准编码器的序列。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vision-comparison.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：从局部图像结构到全局交互"><img src="diagrams/transformer/vision-comparison.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="从局部图像结构到全局交互。CNN 的结构先验与 Transformer 的长距离连接" /></a><figcaption>CNN 的结构先验与 Transformer 的长距离连接</figcaption></figure><p>先看整体：图像切成 patch，每块线性投影为 token，再加入位置嵌入与 class token，经过编码器，最后分类。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-overview.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：ViT：切块、投影、编码与分类"><img src="diagrams/transformer/vit-overview.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="ViT：切块、投影、编码与分类。图像 → patch tokens → Transformer → 类别" /></a><figcaption>图像 → patch tokens → Transformer → 类别</figcaption></figure><p>对于 <span class="cnn-inline-math" data-tex="H\times W\times C">H\times W\times C</span> 图像，每块大小为 <span class="cnn-inline-math" data-tex="P\times P">P\times P</span>，假设边长可整除，patch 数为 <span class="cnn-inline-math" data-tex="N=HW/P^2">N=HW/P^2</span>。每块展平为 <span class="cnn-inline-math" data-tex="P^2C">P^2C</span> 维，再用同一投影矩阵映射到 <span class="cnn-inline-math" data-tex="D">D</span> 维。例如 <span class="cnn-inline-math" data-tex="224\times224">224\times224</span> 图像、<span class="cnn-inline-math" data-tex="16\times16">16\times16</span> patch，得到 196 个 patch。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/patch-embedding.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：每个 patch 展平并线性投影"><img src="diagrams/transformer/patch-embedding.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="每个 patch 展平并线性投影。N = HW/P²；每块展平为 P²C 维" /></a><figcaption>N = HW/P²；每块展平为 P²C 维</figcaption><div class="tf-source-video" data-source-video="patch-embedding"><div class="tf-video-stage"><video playsinline muted preload="metadata" poster="media/transformer/image367.png" aria-label="图像切块 → 顺序展开 → 共享线性投影；每块对应一个 token。"><source src="media/transformer/media1.mp4" type="video/mp4" /></video></div><div class="tf-animation-controls" role="group" aria-label="视频播放"><button type="button" class="tf-animation-button" data-video-action="play" aria-label="播放" data-tooltip="播放" aria-pressed="false"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-video-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-video-action="expand" aria-label="放大视频" data-tooltip="放大视频"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-maximize"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+  <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+</svg>
+</button></div><p>图像切块 → 顺序展开 → 共享线性投影；每块对应一个 token。</p></div></figure><p>位置方案包括无位置、一维、二维与相对位置。原始 ViT 采用可学习的一维位置嵌入；学到的位置向量能反映部分二维邻近关系。实验还比较不同位置设计。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-position.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：二维图像也需要位置嵌入"><img src="diagrams/transformer/vit-position.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="二维图像也需要位置嵌入。无位置、一维、二维、相对位置" /></a><figcaption>无位置、一维、二维、相对位置</figcaption></figure><p>序列前加入可学习的 class token，长度成为 <span class="cnn-inline-math" data-tex="N+1">N+1</span>。编码器之后读取它的输出状态，作为整幅图像表示进入分类头。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/class-token.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：在序列前加入可学习 class token"><img src="diagrams/transformer/class-token.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="在序列前加入可学习 class token。输出的 class 状态进入分类头" /></a><figcaption>输出的 class 状态进入分类头</figcaption></figure><p>编码器重复 Pre-LN 布局的 MSA 与 MLP 子层，均有残差路径。块间保持 <span class="cnn-inline-math" data-tex="D">D</span> 维，MLP 中间常扩大到 <span class="cnn-inline-math" data-tex="4D">4D</span>，最后读 class 状态。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-encoder.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：对 patch 序列重复编码器块"><img src="diagrams/transformer/vit-encoder.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="对 patch 序列重复编码器块。Pre-LN → MSA / MLP → 残差" /></a><figcaption>Pre-LN → MSA / MLP → 残差</figcaption></figure><p>Base、Large、Huge 分别使用不同块数、隐藏维和头数。Base 为 12 层、768 维、12 头，Large 为 24 层、1024 维、16 头，Huge 为 32 层、1280 维、16 头。patch 大小同时改变表示粒度与计算量。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-sizes.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：深度、隐藏维、MLP 与头数"><img src="diagrams/transformer/vit-sizes.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="深度、隐藏维、MLP 与头数。Base / Large / Huge 的参数配置" /></a><figcaption>Base / Large / Huge 的参数配置</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-vit-limits" data-topic="tf-models"><div class="article-section-label"><span>语言与视觉模型 / 20</span><button type="button" data-present-section="tf-vit-limits">▷ 演示本节</button></div><h2>ViT 的实验结果与结构局限</h2><p>结果表与曲线比较不同预训练数据和计算预算。JFT-300M 条件下的 ViT 在所列任务表现良好；数据规模曲线也说明性能与预训练规模有关。比较时连同分辨率、模型尺寸和预训练条件读取。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-results.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：在给定预训练设置下比较表现"><img src="diagrams/transformer/vit-results.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="在给定预训练设置下比较表现。JFT-300M、ImageNet-21k 与计算预算" /></a><figcaption>JFT-300M、ImageNet-21k 与计算预算</figcaption></figure><p>将 patch 投影矩阵的前 40 个主成分可视化，可以观察局部纹理与颜色模式。图中小块表示学到的投影方向，帮助理解 patch 像素如何变为表示向量。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-learned-patches.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：观察学到的 patch 投影模式"><img src="diagrams/transformer/vit-learned-patches.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="观察学到的 patch 投影模式。线性投影矩阵的前 40 个主成分" /></a><figcaption>线性投影矩阵的前 40 个主成分</figcaption></figure><p>固定尺度 token 不便直接提供密集预测所需的多尺度特征；全局注意力矩阵又随 token 数平方增长。patch 边长减半时，token 数约增加到 4 倍，分数矩阵元素约增加到 16 倍，这引出 Swin 的层级与窗口设计。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vit-limitations.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：固定尺度与全局二次复杂度"><img src="diagrams/transformer/vit-limitations.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="固定尺度与全局二次复杂度。密集预测需要多尺度、高分辨率表示" /></a><figcaption>密集预测需要多尺度、高分辨率表示</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-swin" data-topic="tf-models"><div class="article-section-label"><span>语言与视觉模型 / 21</span><button type="button" data-present-section="tf-swin">▷ 演示本节</button></div><h2>Swin：层级结构与 Patch Merging</h2><p>Swin 同时引入层级表示与局部窗口。不同分辨率的特征可以连接 FPN 或 U-Net 等结构，用于检测与分割；窗口内计算控制高分辨率下的注意力成本。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-hierarchy.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：层级特征与局部窗口"><img src="diagrams/transformer/swin-hierarchy.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="层级特征与局部窗口。面向分类、检测和分割" /></a><figcaption>面向分类、检测和分割</figcaption></figure><p>整体按阶段组织：每阶段包含多个 Swin 块，阶段间使用 Patch Merging 降低分辨率并增加通道。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-architecture.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：分阶段堆叠 Swin 块"><img src="diagrams/transformer/swin-architecture.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="分阶段堆叠 Swin 块。Patch merging + Swin Transformer block" /></a><figcaption>Patch merging + Swin Transformer block</figcaption></figure><p>Patch Merging 取相邻 <span class="cnn-inline-math" data-tex="2\times2">2\times2</span> token，在特征维拼接为 <span class="cnn-inline-math" data-tex="4C">4C</span>，经过归一化和线性投影到 <span class="cnn-inline-math" data-tex="2C">2C</span>。空间尺寸减半，token 数成为四分之一。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/patch-merging.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：把相邻 2×2 token 合并"><img src="diagrams/transformer/patch-merging.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="把相邻 2×2 token 合并。H×W×C → H/2×W/2×2C" /></a><figcaption>H×W×C → H/2×W/2×2C</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-swin-windows" data-topic="tf-models"><div class="article-section-label"><span>语言与视觉模型 / 22</span><button type="button" data-present-section="tf-swin-windows">▷ 演示本节</button></div><h2>窗口、移位与相对位置偏置</h2><p>固定窗口内做 W-MSA，会让窗口之间暂时隔离。相邻块使用 SW-MSA，将窗口边界移位，让前一层属于不同窗口的相邻 token 进入同一新窗口。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-blocks.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：相邻块交替使用 W-MSA 与 SW-MSA"><img src="diagrams/transformer/swin-blocks.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="相邻块交替使用 W-MSA 与 SW-MSA。固定窗口 → 移位窗口" /></a><figcaption>固定窗口 → 移位窗口</figcaption></figure><p>设输入包含 <span class="cnn-inline-math" data-tex="h\times w">h\times w</span> 个 patch、通道为 <span class="cnn-inline-math" data-tex="C">C</span>，窗口边长为 <span class="cnn-inline-math" data-tex="M">M</span>。全局与窗口注意力的计算量分别为：</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/window-cost.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：窗口注意力如何降低成本"><img src="diagrams/transformer/window-cost.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="窗口注意力如何降低成本。固定 M×M 窗口：分数项约为 hwM²" /></a><figcaption>固定 M×M 窗口：分数项约为 hwM²</figcaption></figure><div class="cnn-equation" data-tex="\Omega(\mathrm{MSA})=4hwC^2+2(hw)^2C,\qquad \Omega(\mathrm{W\!\! -\!MSA})=4hwC^2+2M^2hwC"><pre>\Omega(\mathrm{MSA})=4hwC^2+2(hw)^2C,\qquad \Omega(\mathrm{W\!\! -\!MSA})=4hwC^2+2M^2hwC</pre></div><p>固定 <span class="cnn-inline-math" data-tex="M">M</span> 时，窗口分数项随 <span class="cnn-inline-math" data-tex="hw">hw</span> 线性增长；两者仍包含相同的投影计算项。</p><p>实现移位时，可以循环移动特征再按固定大小分组。示例有 <span class="cnn-inline-math" data-tex="4\times4">4\times4</span> 个 token，标注的 0 至 8 是区域编号，同一区域可以包含多个 token。循环向左、向上各移一格后，四个 <span class="cnn-inline-math" data-tex="2\times2">2\times2</span> 计算窗口的区域编号分别为 <span class="cnn-inline-math" data-tex="[4,4,4,4]">[4,4,4,4]</span>、<span class="cnn-inline-math" data-tex="[5,3,5,3]">[5,3,5,3]</span>、<span class="cnn-inline-math" data-tex="[7,7,1,1]">[7,7,1,1]</span>、<span class="cnn-inline-math" data-tex="[8,6,2,0]">[8,6,2,0]</span>。</p><p>同一区域编号的 token 可以相互读取，不同绕回区域需要屏蔽。第一个窗口的四个 token 都属于区域 4，均可互读；最后一个窗口虽然把 8、6、2、0 打包在一起，查询区域 8 时仍要把对 6、2、0 的分数设为负无穷。计算后再逆移位，恢复原空间索引。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="shifted-window"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><p>窗口内的二维相对位移可通过偏置 <span class="cnn-inline-math" data-tex="B">B</span> 加入注意力分数。每对 query/key 根据相对行列位移查表，再归一化与汇总。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/relative-bias.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：把二维相对位置加入分数"><img src="diagrams/transformer/relative-bias.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="把二维相对位置加入分数。softmax(QKᵀ/√d + B)V" /></a><figcaption>softmax(QKᵀ/√d + B)V</figcaption></figure><div class="cnn-equation" data-tex="\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt d}+B\right)V"><pre>\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt d}+B\right)V</pre></div><p>结构表给出 Swin-T、S、B、L 各阶段的通道、头数、深度与输出尺度。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-specs.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Swin-T、S、B、L 的结构配置"><img src="diagrams/transformer/swin-specs.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Swin-T、S、B、L 的结构配置。各阶段深度、通道、头数与输出尺度" /></a><figcaption>各阶段深度、通道、头数与输出尺度</figcaption></figure><p>分类表区分 ImageNet-1k 与 22k 预训练，同时列出分辨率、参数、FLOPs、吞吐与准确率。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-classification.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：分类实验：配置与表现一起读"><img src="diagrams/transformer/swin-classification.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="分类实验：配置与表现一起读。ImageNet-1k 与 22k 预训练结果" /></a><figcaption>ImageNet-1k 与 22k 预训练结果</figcaption></figure><p>检测与分割结果分别使用 AP 与 mIoU 等指标。层级输出支持这些密集预测任务，结果仍需连同 backbone、任务框架和计算量比较。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/swin-dense-results.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：检测和分割展示层级特征的用途"><img src="diagrams/transformer/swin-dense-results.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="检测和分割展示层级特征的用途。COCO 与 ADE20K 的任务结果" /></a><figcaption>COCO 与 ADE20K 的任务结果</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-intro" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 23</span><button type="button" data-present-section="tf-moe-intro">▷ 演示本节</button></div><h2>MoE：专家与路由器</h2><p>混合专家（MoE）包含两部分：多个专家子网络，以及选择路径的路由器（gate）。在 Transformer 中，专家通常是 FFN，每个 token 可以只激活少数几个专家。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/moe-components.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：一组专家，加一个路由器"><img src="diagrams/transformer/moe-components.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="一组专家，加一个路由器。Experts 处理输入；Router 选择路径" /></a><figcaption>Experts 处理输入；Router 选择路径</figcaption></figure><p>专家可能在 token 与上下文层面形成分工，例如标点、词形、语法或视觉描述。这个分工由训练学习，不应把专家名直接等同于某个人类知识领域。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-meaning.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：专家针对 token 与上下文分工"><img src="diagrams/transformer/expert-meaning.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="专家针对 token 与上下文分工。标点、词形、语法和使用环境" /></a><figcaption>标点、词形、语法和使用环境</figcaption></figure><p>路由在多层发生，每层重新选择。一个专家是模型某层的子网络；一段输入经过多个专家路径之后，才到达最终输出。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-submodel.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：每层选择一个或多个专家"><img src="diagrams/transformer/expert-submodel.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="每层选择一个或多个专家。专家是模型某层的子网络" /></a><figcaption>专家是模型某层的子网络</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-benefits" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 24</span><button type="button" data-present-section="tf-moe-benefits">▷ 演示本节</button></div><h2>稀疏参数为什么有吸引力</h2><p>稀疏激活将总容量与单次计算分开。实验在相近激活 FLOPs 下增加总参数，并观察训练损失的改善。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/moe-flops.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：相近激活 FLOPs 下扩大容量"><img src="diagrams/transformer/moe-flops.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="相近激活 FLOPs 下扩大容量。实验中，更多参数可改善损失" /></a><figcaption>实验中，更多参数可改善损失</figcaption></figure><p>随后比较 Switch 与 OLMoE 的训练曲线，横轴既有训练步数，也有时间或已处理 token。模型效果、激活计算和实际训练速度分别观察。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/moe-training-results.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：比较训练效率"><img src="diagrams/transformer/moe-training-results.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="比较训练效率。Switch 与 OLMoE 的损失、速度曲线" /></a><figcaption>Switch 与 OLMoE 的损失、速度曲线</figcaption></figure><p>性能与 activated parameters 的原对照图显示，一些稀疏模型在相近激活参数量下有竞争力。所有专家仍需要存储，通信、硬件利用率和训练设置会影响实际成本。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/moe-dense-comparison.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：性能与激活参数的对照"><img src="diagrams/transformer/moe-dense-comparison.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="性能与激活参数的对照。MoE 与 dense 模型的实验比较" /></a><figcaption>MoE 与 dense 模型的实验比较</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-placement" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 25</span><button type="button" data-present-section="tf-moe-placement">▷ 演示本节</button></div><h2>从 Dense FFN 到专家路径</h2><p>先定位原 FFN：注意力将上下文信息汇入当前向量，FFN 随后进一步变换特征。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/dense-ffn.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：先回顾 Transformer 的 FFN"><img src="diagrams/transformer/dense-ffn.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="先回顾 Transformer 的 FFN。注意力形成上下文，FFN 进一步变换" /></a><figcaption>注意力形成上下文，FFN 进一步变换</figcaption></figure><p>dense 路径为每个 token 计算全部前馈参数，sparse 路径根据输入选择部分专家。原问题例子展示不同输入触发不同子网络的直觉。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/dense-sparse.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：dense 全部计算，sparse 选择计算"><img src="diagrams/transformer/dense-sparse.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="dense 全部计算，sparse 选择计算。当前 token 只经过部分参数" /></a><figcaption>当前 token 只经过部分参数</figcaption></figure><p>接着观察证据：原分工表展示细粒度 token 类别，Mixtral 的代码例子按第一专家选择给 token 着色。它们说明路由存在差异，不同模型的专门化形式也可能不同。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-evidence.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：专家学到了什么？看路由证据"><img src="diagrams/transformer/expert-evidence.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="专家学到了什么？看路由证据。细粒度分工表与 Mixtral token 着色" /></a><figcaption>细粒度分工表与 Mixtral token 着色</figcaption></figure><p>每个专家可以是一整个 FFN。多层模型中，同一个 token 逐层经过不同专家；下一 token 的路径又可能变化。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-ffn.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：每个专家可是一整个 FFN"><img src="diagrams/transformer/expert-ffn.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="每个专家可是一整个 FFN。逐层路由，不等于多个完整 LLM" /></a><figcaption>逐层路由，不等于多个完整 LLM</figcaption></figure><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-paths.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：不同 token 经过不同专家路径"><img src="diagrams/transformer/expert-paths.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="不同 token 经过不同专家路径。同一句话、不同位置、不同层" /></a><figcaption>同一句话、不同位置、不同层</figcaption></figure><p>常见方案是在块内用 MoE 替换 MLP/FFN，保留注意力子层。也有对注意力头做路由的较少见方案；讨论专家数时，要先明确被替换的模块。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-placement.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：在块中用 MoE 替换 FFN"><img src="diagrams/transformer/expert-placement.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="在块中用 MoE 替换 FFN。常见：MLP；较少见：注意力头" /></a><figcaption>常见：MLP；较少见：注意力头</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-routing" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 26</span><button type="button" data-present-section="tf-moe-routing">▷ 演示本节</button></div><h2>路由器：选择与加权组合</h2><p>专家之前的路由器根据当前 token 产生门控概率，选择专家，再将选中专家的输出乘以相应门控权重并求和。路由器与专家一起组成 MoE 层，训练与推理都用到路径选择。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/router-role.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：为当前 token 选择专家"><img src="diagrams/transformer/router-role.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="为当前 token 选择专家。路由概率 → 选中专家 → 加权输出" /></a><figcaption>路由概率 → 选中专家 → 加权输出</figcaption></figure><p>Dense MoE 计算所有专家，再加权；Sparse MoE 只计算所选专家。本讲随后讨论稀疏形式。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/dense-sparse-moe.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Dense MoE 与 Sparse MoE"><img src="diagrams/transformer/dense-sparse-moe.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Dense MoE 与 Sparse MoE。计算全部专家，或只计算所选专家" /></a><figcaption>计算全部专家，或只计算所选专家</figcaption></figure><p>最简单的路由先做线性映射 <span class="cnn-inline-math" data-tex="H(x)=xW_r">H(x)=xW_r</span>，再归一化得到 <span class="cnn-inline-math" data-tex="G(x)">G(x)</span>，输出为专家结果的加权和。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/router-formula.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：输入经过路由权重与 Softmax"><img src="diagrams/transformer/router-formula.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="输入经过路由权重与 Softmax。H(x)=xW；G(x)=softmax(H(x))" /></a><figcaption>H(x)=xW；G(x)=softmax(H(x))</figcaption></figure><div class="cnn-equation" data-tex="G(x)=\operatorname{softmax}(xW_r),\qquad y=\sum_{i\in S(x)}g_i(x)E_i(x)"><pre>G(x)=\operatorname{softmax}(xW_r),\qquad y=\sum_{i\in S(x)}g_i(x)E_i(x)</pre></div><p><span class="cnn-inline-math" data-tex="S(x)">S(x)</span> 是所选专家集合。是否在所选集合内重新归一化，由具体路由方案决定。先看完整输入、门控、专家、输出的路径，再引出选择过度集中会造成的问题。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/router-flow.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：把路由和专家计算连起来"><img src="diagrams/transformer/router-flow.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="把路由和专家计算连起来。输入 x → 门控 → 专家 → 加权和" /></a><figcaption>输入 x → 门控 → 专家 → 加权和</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-topk" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 27</span><button type="button" data-present-section="tf-moe-topk">▷ 演示本节</button></div><h2>路由坍缩、Noisy Top-k 与分配方向</h2><p>某些专家若早期学习得更快，路由器可能更常选它们；它们得到更多 token 和梯度，又进一步强化偏好。热点专家过载，其他专家训练不足，形成路由坍缩。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/router-collapse.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：反复选择少数专家产生正反馈"><img src="diagrams/transformer/router-collapse.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="反复选择少数专家产生正反馈。热点过载；其他专家训练不足" /></a><figcaption>热点过载；其他专家训练不足</figcaption></figure><p>Noisy Top-k 先在路由分数上加入可学习噪声以促进探索，再将最高 <span class="cnn-inline-math" data-tex="k">k</span> 项之外的分数置为负无穷。Softmax 后，未选专家权重为零。图中固定一次示例噪声，以便逐步核对数值。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="noisy-topk"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="H(x)=xW_r+\varepsilon\odot\operatorname{softplus}(xW_{\mathrm{noise}}),\qquad G(x)=\operatorname{softmax}(\operatorname{KeepTopK}(H(x),k))"><pre>H(x)=xW_r+\varepsilon\odot\operatorname{softplus}(xW_{\mathrm{noise}}),\qquad G(x)=\operatorname{softmax}(\operatorname{KeepTopK}(H(x),k))</pre></div><p>Top-k 控制稀疏度，噪声提供探索；仅保留少数专家并不自动保证负载均衡。</p><p>Token Choice 让每个 token 选择专家。Top-1 计算一个专家，Top-2 计算两个并组合；激活计算与路径冗余随 <span class="cnn-inline-math" data-tex="k">k</span> 改变。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/token-choice.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Token Choice：每个 token 选专家"><img src="diagrams/transformer/token-choice.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Token Choice：每个 token 选专家。Top-1 与 Top-2 的计算与加权组合" /></a><figcaption>Top-1 与 Top-2 的计算与加权组合</figcaption></figure><p>还有 Expert Choice，让专家按容量选择 token；全局路由则通过优化共同决定分配。图中矩阵按选择方向组织，容量约束也随方案改变。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/routing-directions.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：三种分配方向"><img src="diagrams/transformer/routing-directions.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="三种分配方向。token 选专家；专家选 token；全局匹配" /></a><figcaption>token 选专家；专家选 token；全局匹配</figcaption></figure><p>比较实验给出训练与验证损失、HellaSwag、MMLU 等指标。Token Choice 是常见选择，其他路由也有自己的实验结果与适用约束。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/routing-evidence.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：比较 Token / Expert Choice"><img src="diagrams/transformer/routing-evidence.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="比较 Token / Expert Choice。查看损失与任务指标" /></a><figcaption>查看损失与任务指标</figcaption></figure><div class="cnn-lab tf-lab" id="moe-routing-lab"><div class="cnn-lab-heading"><h3>Top-2 的选择与权重</h3><output id="moe-output"></output></div><div class="transformer-slider-list moe-sliders"><label>E1<input type="range" min="-4" max="4" value="2.4" step="0.1" data-expert-score aria-label="E1 的路由分数"><b>2.4</b></label><label>E2<input type="range" min="-4" max="4" value="1.6" step="0.1" data-expert-score aria-label="E2 的路由分数"><b>1.6</b></label><label>E3<input type="range" min="-4" max="4" value="0.2" step="0.1" data-expert-score aria-label="E3 的路由分数"><b>0.2</b></label><label>E4<input type="range" min="-4" max="4" value="-0.4" step="0.1" data-expert-score aria-label="E4 的路由分数"><b>-0.4</b></label></div><div class="transformer-expert-grid" id="expert-grid" aria-live="polite"></div><p>所选集合内重新归一化，未选专家权重为 0。</p></div></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-balance" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 28</span><button type="button" data-present-section="tf-moe-balance">▷ 演示本节</button></div><h2>重要性、CV 与辅助损失</h2><p>先为每个专家统计重要性：将一个批次内全部 token 分配给它的门控概率相加。这个量反映权重分布，不等于实际接收 token 数。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/importance.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：汇总一个批次的专家重要性"><img src="diagrams/transformer/importance.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="汇总一个批次的专家重要性。Importanceᵢ = ∑ₓ Gᵢ(x)" /></a><figcaption>Importanceᵢ = ∑ₓ Gᵢ(x)</figcaption></figure><div class="cnn-equation" data-tex="I_i=\sum_{x\in\mathcal B}G_i(x),\qquad \operatorname{CV}(I)=\frac{\operatorname{std}(I)}{\operatorname{mean}(I)}"><pre>I_i=\sum_{x\in\mathcal B}G_i(x),\qquad \operatorname{CV}(I)=\frac{\operatorname{std}(I)}{\operatorname{mean}(I)}</pre></div><p>比较两组数值：重要性为 <span class="cnn-inline-math" data-tex="[0.8,0.2,0.1,0.05,0.2]">[0.8,0.2,0.1,0.05,0.2]</span> 时，均值 0.27，总体标准差约 0.271，CV 约 1.005；<span class="cnn-inline-math" data-tex="[0.3,0.3,0.2,0.2,0.3]">[0.3,0.3,0.2,0.2,0.3]</span> 的均值 0.26，标准差约 0.049，CV 约 0.188。后者在专家间更均匀。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/importance-cv.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：用 CV 衡量重要性差异"><img src="diagrams/transformer/importance-cv.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="用 CV 衡量重要性差异。CV = 标准差 / 均值" /></a><figcaption>CV = 标准差 / 均值</figcaption></figure><p>以 CV 的平方构成重要性辅助损失，与主任务损失一起优化。平方将差异转成非负惩罚，权重控制均衡目标的影响。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/cv-loss.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：CV² 构成重要性辅助损失"><img src="diagrams/transformer/cv-loss.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="CV² 构成重要性辅助损失。L = Ltask + wimportance · CV(Importance)²" /></a><figcaption>L = Ltask + wimportance · CV(Importance)²</figcaption></figure><div class="cnn-equation" data-tex="L=L_{\mathrm{task}}+w_{\mathrm{importance}}\operatorname{CV}(I)^2"><pre>L=L_{\mathrm{task}}+w_{\mathrm{importance}}\operatorname{CV}(I)^2</pre></div></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-capacity" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 29</span><button type="button" data-present-section="tf-moe-capacity">▷ 演示本节</button></div><h2>专家容量与 token 溢出</h2><p>重要性之外，还要统计实际分配。若大量 token 选择同一专家，即使模型总容量很大，该专家也可能成为拥塞点，其他专家却没有得到足够训练。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/token-load.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：概率重要性之外，还要看实际 token 数"><img src="diagrams/transformer/token-load.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="概率重要性之外，还要看实际 token 数。不同 token 可能集中送向同一专家" /></a><figcaption>不同 token 可能集中送向同一专家</figcaption></figure><p>原容量例子为每个专家设置 3 个槽位。E1 满员后，后续 token 可尝试备选 E4；两边都满时，token 跳过当前专家分支，通过残差继续下一层，这称为 overflow。回退策略取决于实现。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="capacity-overflow"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><p>Switch 使用 Top-1 路由，每个 token 计算一个专家，减少激活计算与分配复杂度。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/switch-top1.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Switch 用 Top-1 路由"><img src="diagrams/transformer/switch-top1.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Switch 用 Top-1 路由。每个 token 计算一个专家" /></a><figcaption>每个 token 计算一个专家</figcaption></figure><p>单专家容量可写为 <span class="cnn-inline-math" data-tex="C=\lceil cT/E\rceil">C=\lceil cT/E\rceil</span>，其中 <span class="cnn-inline-math" data-tex="T">T</span> 是批内 token 数，<span class="cnn-inline-math" data-tex="E">E</span> 是专家数，<span class="cnn-inline-math" data-tex="c">c</span> 是容量因子。示例有 6 个 token、3 个专家、因子 1.0，容量为 2；因子 1.5 时容量为 3。较小容量增加溢出，较大容量预留更多闲置槽位。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/capacity-factor.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：用容量因子控制缓冲区"><img src="diagrams/transformer/capacity-factor.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="用容量因子控制缓冲区。6 个 token / 3 个专家 × 1.0 = 容量 2" /></a><figcaption>6 个 token / 3 个专家 × 1.0 = 容量 2</figcaption></figure><p>Switch 的辅助损失同时使用实际 token 比例 <span class="cnn-inline-math" data-tex="f_i">f_i</span> 和平均路由概率 <span class="cnn-inline-math" data-tex="p_i">p_i</span>。示例专家接收数为 3、1、2，因此 <span class="cnn-inline-math" data-tex="f=[3/6,1/6,2/6]">f=[3/6,1/6,2/6]</span>。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/switch-loss.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Switch 的辅助损失有两种统计量"><img src="diagrams/transformer/switch-loss.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Switch 的辅助损失有两种统计量。实际比例 fᵢ 与平均概率 pᵢ" /></a><figcaption>实际比例 fᵢ 与平均概率 pᵢ</figcaption></figure><div class="cnn-equation" data-tex="f_i=\frac1T\sum_x\mathbf1[\arg\max_jG_j(x)=i],\quad p_i=\frac1T\sum_xG_i(x),\quad L_{\mathrm{aux}}=\alpha E\sum_{i=1}^{E}f_ip_i"><pre>f_i=\frac1T\sum_x\mathbf1[\arg\max_jG_j(x)=i],\quad p_i=\frac1T\sum_xG_i(x),\quad L_{\mathrm{aux}}=\alpha E\sum_{i=1}^{E}f_ip_i</pre></div><p>这是不同于 CV² 的辅助目标；实际分配是离散的，路由概率提供可微的训练信号。</p></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-balancing-variants" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 30</span><button type="button" data-present-section="tf-moe-balancing-variants">▷ 演示本节</button></div><h2>均衡变体与批次效应</h2><p>DeepSeek 的设计同时考虑专家级与设备级均衡。专家级看各专家的分配，设备级将放在同一设备上的专家统计量聚合，针对设备负载。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/device-balance.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：均衡既可以按专家，也可以按设备"><img src="diagrams/transformer/device-balance.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="均衡既可以按专家，也可以按设备。将同一设备上的专家统计量合并" /></a><figcaption>将同一设备上的专家统计量合并</figcaption></figure><p>DeepSeek-V3 给每个专家增加用于选择的偏置，按负载在线调整，使低负载专家更容易被选中。选择偏置与输出混合权重需要区分；该设计仍保留序列级辅助项。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/expert-bias.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：用专家偏置调整分配倾向"><img src="diagrams/transformer/expert-bias.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="用专家偏置调整分配倾向。按负载更新选择偏置" /></a><figcaption>按负载更新选择偏置</figcaption></figure><p>消融图比较有无均衡损失时的训练、验证曲线及专家负载。效果与系统负载一起观察，才知道稀疏容量是否被有效使用。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/balance-ablation.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：去掉均衡损失会发生什么？"><img src="diagrams/transformer/balance-ablation.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="去掉均衡损失会发生什么？。损失曲线与专家负载分布" /></a><figcaption>损失曲线与专家负载分布</figcaption></figure><p>采用批次容量与 token 丢弃策略时，同一个输入可能因同批其他 token 占用槽位而走不同路径。这个机制说明路由可能具有批次依赖；不能据此确认未公开模型的结构或行为原因。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/batch-effects.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：批次容量会影响同一 token 的路径"><img src="diagrams/transformer/batch-effects.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="批次容量会影响同一 token 的路径。其他 token 占用槽位，可能改变溢出结果" /></a><figcaption>其他 token 占用槽位，可能改变溢出结果</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-variants" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 31</span><button type="button" data-present-section="tf-moe-variants">▷ 演示本节</button></div><h2>路由变体、细粒度与共享专家</h2><p>路由方法还包括哈希、强化学习与全局匹配。Top-k 依赖当前分数；哈希采用固定映射；强化学习学习分配策略；匹配方法共同优化批次分配。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/routing-variants.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Top-k、哈希、RL 与匹配路由"><img src="diagrams/transformer/routing-variants.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Top-k、哈希、RL 与匹配路由。不同选择规则形成不同条件计算" /></a><figcaption>不同选择规则形成不同条件计算</figcaption></figure><p>将专家分成更多、更细的子网络，可在相近激活计算下增加组合方式。共享专家始终开启，路由专家按 token 选择，两条分支共同提供输出。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/fine-shared.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：更多细粒度专家与始终开启的共享专家"><img src="diagrams/transformer/fine-shared.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="更多细粒度专家与始终开启的共享专家。可组合路径 + 公共变换" /></a><figcaption>可组合路径 + 公共变换</figcaption></figure><p>DeepSeek 的消融实验中，细粒度专家与共享专家在所示配置下都有收益。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/deepseek-ablation.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：DeepSeek 消融：细粒度与共享专家"><img src="diagrams/transformer/deepseek-ablation.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="DeepSeek 消融：细粒度与共享专家。在该配置下，增加两类设计有收益" /></a><figcaption>在该配置下，增加两类设计有收益</figcaption></figure><p>OLMoE 的另一组消融中，细粒度专家有收益，共享专家未显示同样收益。保留这个差别：同一种设计的效果会随模型、预算与训练设置变化。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/olmoe-ablation.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：OLMoE：细粒度有益，共享专家未见收益"><img src="diagrams/transformer/olmoe-ablation.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="OLMoE：细粒度有益，共享专家未见收益。保留与前一组实验不同的结论" /></a><figcaption>保留与前一组实验不同的结论</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-vision-moe" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 32</span><button type="button" data-present-section="tf-vision-moe">▷ 演示本节</button></div><h2>视觉 MoE 与批优先路由</h2><p>视觉模型中的 patch 已经是 token，可以同样送入路由器。先回顾切块、投影、位置嵌入和编码器路径。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vision-moe-input.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：图像 patch 也能作为路由输入"><img src="diagrams/transformer/vision-moe-input.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="图像 patch 也能作为路由输入。图像 → patch tokens → 编码器" /></a><figcaption>图像 → patch tokens → 编码器</figcaption></figure><p>V-MoE 将 ViT 编码器的 dense FFN 替换成稀疏专家层，注意力子层保持。大量图像 patch 会产生更多路由请求。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/vision-moe-layer.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：V-MoE 用稀疏专家替换编码器 FFN"><img src="diagrams/transformer/vision-moe-layer.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="V-MoE 用稀疏专家替换编码器 FFN。注意力保持，前馈层变为条件计算" /></a><figcaption>注意力保持，前馈层变为条件计算</figcaption></figure><p>较小专家容量可以控制资源，但会丢弃部分 patch 的专家计算。原图用剩余图块显示：容量分配顺序可能让主要对象区域也丢失。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/patch-overflow.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：小容量会丢弃部分 patch 分支"><img src="diagrams/transformer/patch-overflow.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="小容量会丢弃部分 patch 分支。原图只剩局部内容可被专家处理" /></a><figcaption>原图只剩局部内容可被专家处理</figcaption></figure><p>Batch Priority Routing 根据路由分数为 patch 排序，先处理重要 patch。容量不足时，让高分 patch 优先得到专家计算。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/patch-priority.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：先处理重要 patch，再分配容量"><img src="diagrams/transformer/patch-priority.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="先处理重要 patch，再分配容量。Batch Priority Routing" /></a><figcaption>Batch Priority Routing</figcaption></figure><p>比较保留 80%、50%、10% 的原图，观察所保留位置是否仍覆盖关键对象。稀疏计算控制的是专家分支处理量，并非把全部编码器计算都按同一比例删掉。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/patch-retention.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：从全部 patch 到只保留 10%"><img src="diagrams/transformer/patch-retention.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="从全部 patch 到只保留 10%。比较保留 80%、50%、10% 时的位置" /></a><figcaption>比较保留 80%、50%、10% 时的位置</figcaption></figure></section><section class="intro-topic cnn-topic tf-topic" id="tf-moe-systems" data-topic="tf-moe"><div class="article-section-label"><span>混合专家 / 33</span><button type="button" data-present-section="tf-moe-systems">▷ 演示本节</button></div><h2>总参数、激活参数与计算账本</h2><p>模型总参数包含所有专家，单个 token 的激活参数只包含共享部分和选中专家。总量影响存储，激活量影响计算，两者要分开记录。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/sparse-active.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：加载全部专家，每个 token 使用部分专家"><img src="diagrams/transformer/sparse-active.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="加载全部专家，每个 token 使用部分专家。总参数影响存储，激活参数影响计算" /></a><figcaption>总参数影响存储，激活参数影响计算</figcaption></figure><p>原 Mixtral 8×7B 案例中，每个专家约 5.6B，而非整个 7B 模型；加上共享嵌入、注意力、路由与 LM head，总参数约 46.7B。Top-2 下，每 token 激活约 12.8B。原账本使用不同专家数量计算这两项。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/mixtral-parameters.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：Mixtral 8×7B 的真实参数账本"><img src="diagrams/transformer/mixtral-parameters.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="Mixtral 8×7B 的真实参数账本。每专家约 5.6B；总量约 46.7B；激活约 12.8B" /></a><figcaption>每专家约 5.6B；总量约 46.7B；激活约 12.8B</figcaption></figure><p>MoE 用稀疏性增加容量，Top-k 控制激活路径，均衡与容量约束控制专家利用率。实际效率还依赖通信、设备放置和批次；质量、存储、激活计算与测得的延迟共同决定方案是否合适。</p><figure class="intro-visual"><a class="tf-figure-link" href="diagrams/transformer/moe-summary.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大：稀疏性、路由和系统成本共同决定效果"><img src="diagrams/transformer/moe-summary.svg?v=20261009-2" width="960" height="417" loading="lazy" alt="稀疏性、路由和系统成本共同决定效果。容量、质量、激活计算、存储与通信" /></a><figcaption>容量、质量、激活计算、存储与通信</figcaption></figure></section></div>
+<div id="slides-mode" class="intro-mode-panel intro-slides-panel" role="tabpanel" hidden><header class="intro-slide-heading"><div><div class="eyebrow"><i></i><span id="slide-topic">自注意力</span></div><h2 id="slide-title">Transformer：序列到序列</h2><p id="slide-caption">编码输入序列，再生成输出序列</p></div><div class="intro-slide-number"><b id="slide-page">01</b><span id="slide-total"> / 122</span></div></header><div class="intro-slide-image"><a class="tf-figure-link" id="slide-link" href="diagrams/transformer/transformer-task.svg?v=20261009-2" target="_blank" rel="noopener" aria-label="放大当前图解"><img id="slide-image" src="diagrams/transformer/transformer-task.svg?v=20261009-2" width="960" height="417" alt="Transformer：序列到序列" /></a><div id="slide-sequence" hidden></div><div id="slide-video" hidden></div></div><p class="intro-slide-note" id="slide-note">示例将“深度学习”翻译成 Deep Learning；编码源输入，再根据源表示生成目标序列。</p><div class="intro-slide-progress" aria-hidden="true"><span id="slide-progress"></span></div><div class="intro-slide-controls"><button class="button secondary" id="previous-slide" type="button">← 上一页</button><span id="slide-counter">1 / 122</span><button class="button primary" id="next-slide" type="button">下一页 →</button></div><div class="intro-slide-footer"><button class="button secondary" id="read-current" type="button">▣ 阅读本节</button><button class="button secondary" id="copy-slide-link" type="button">复制当前位置</button></div></div>
+<footer class="page-footer"><span>AI 工程学 · 第四讲</span><span><a href="pdf/Transformer%20Models.pdf" download>↓ 下载课件 PDF</a></span></footer></div><aside class="page-toc intro-toc"><p>本讲内容</p><a href="#tf-qkv" data-topic-link="tf-attention">自注意力</a><a href="#tf-encoder-block" data-topic-link="tf-encoder">编码器</a><a href="#tf-autoregressive" data-topic-link="tf-decoder">解码器</a><a href="#tf-cross-attention" data-topic-link="tf-encoder-decoder">编码器与解码器</a><a href="#tf-families" data-topic-link="tf-models">语言与视觉模型</a><a href="#tf-moe-intro" data-topic-link="tf-moe">混合专家</a><div class="tf-section-toc"><a href="#tf-qkv" data-section-link="tf-qkv">01 从 Seq2Seq 到自注意力</a><a href="#tf-weighted-sum" data-section-link="tf-weighted-sum">02 归一化权重与 Value 汇总</a><a href="#tf-scaled-attention" data-section-link="tf-scaled-attention">03 矩阵计算与缩放点积注意力</a><a href="#tf-multi-head" data-section-link="tf-multi-head">04 多头注意力：多个相关性子空间</a><a href="#tf-position" data-section-link="tf-position">05 位置编码补回顺序</a><a href="#tf-comparisons" data-section-link="tf-comparisons">06 自注意力与 CNN、RNN</a><a href="#tf-encoder-block" data-section-link="tf-encoder-block">07 编码器块的完整路径</a><a href="#tf-residual-norm" data-section-link="tf-residual-norm">08 残差、前馈网络与层归一化</a><a href="#tf-ln-variants" data-section-link="tf-ln-variants">09 Pre-LN、Post-LN 与归一化轴</a><a href="#tf-autoregressive" data-section-link="tf-autoregressive">10 自回归解码与停止条件</a><a href="#tf-causal-mask" data-section-link="tf-causal-mask">11 因果遮罩怎样阻止未来泄漏</a><a href="#tf-ar-nar" data-section-link="tf-ar-nar">12 自回归与非自回归</a><a href="#tf-cross-attention" data-section-link="tf-cross-attention">13 交叉注意力连接输入与输出</a><a href="#tf-training-inference" data-section-link="tf-training-inference">14 训练、推理与 Teacher Forcing</a><a href="#tf-beam-search" data-section-link="tf-beam-search">15 束搜索：扩展、剪枝与回溯</a><a href="#tf-generation" data-section-link="tf-generation">16 采样、BLEU 算例与评价优化</a><a href="#tf-exposure-bias" data-section-link="tf-exposure-bias">17 前缀分布差异与完整结构回顾</a><a href="#tf-families" data-section-link="tf-families">18 Encoder-only、Encoder–Decoder、Decoder-only</a><a href="#tf-vit-tokens" data-section-link="tf-vit-tokens">19 ViT：图像如何成为序列</a><a href="#tf-vit-limits" data-section-link="tf-vit-limits">20 ViT 的实验结果与结构局限</a><a href="#tf-swin" data-section-link="tf-swin">21 Swin：层级结构与 Patch Merging</a><a href="#tf-swin-windows" data-section-link="tf-swin-windows">22 窗口、移位与相对位置偏置</a><a href="#tf-moe-intro" data-section-link="tf-moe-intro">23 MoE：专家与路由器</a><a href="#tf-moe-benefits" data-section-link="tf-moe-benefits">24 稀疏参数为什么有吸引力</a><a href="#tf-moe-placement" data-section-link="tf-moe-placement">25 从 Dense FFN 到专家路径</a><a href="#tf-moe-routing" data-section-link="tf-moe-routing">26 路由器：选择与加权组合</a><a href="#tf-moe-topk" data-section-link="tf-moe-topk">27 路由坍缩、Noisy Top-k 与分配方向</a><a href="#tf-moe-balance" data-section-link="tf-moe-balance">28 重要性、CV 与辅助损失</a><a href="#tf-moe-capacity" data-section-link="tf-moe-capacity">29 专家容量与 token 溢出</a><a href="#tf-moe-balancing-variants" data-section-link="tf-moe-balancing-variants">30 均衡变体与批次效应</a><a href="#tf-moe-variants" data-section-link="tf-moe-variants">31 路由变体、细粒度与共享专家</a><a href="#tf-vision-moe" data-section-link="tf-vision-moe">32 视觉 MoE 与批优先路由</a><a href="#tf-moe-systems" data-section-link="tf-moe-systems">33 总参数、激活参数与计算账本</a></div></aside></main></div></div><div class="toast" role="status" aria-live="polite"></div><script type="application/json" id="tf-course-data">{"assetVersion":"20261009-2","topics":{"tf-attention":{"label":"自注意力","english":"SELF-ATTENTION","number":"01","target":"tf-qkv","start":1},"tf-encoder":{"label":"编码器","english":"ENCODER","number":"02","target":"tf-encoder-block","start":22},"tf-decoder":{"label":"解码器","english":"DECODER","number":"03","target":"tf-autoregressive","start":28},"tf-encoder-decoder":{"label":"编码器与解码器","english":"ENCODER–DECODER","number":"04","target":"tf-cross-attention","start":38},"tf-models":{"label":"语言与视觉模型","english":"NLP / VISION","number":"05","target":"tf-families","start":53},"tf-moe":{"label":"混合专家","english":"MIXTURE OF EXPERTS","number":"06","target":"tf-moe-intro","start":78}},"sections":[{"title":"从 Seq2Seq 到自注意力","id":"tf-qkv","topic":"tf-attention","index":1},{"title":"归一化权重与 Value 汇总","id":"tf-weighted-sum","topic":"tf-attention","index":2},{"title":"矩阵计算与缩放点积注意力","id":"tf-scaled-attention","topic":"tf-attention","index":3},{"title":"多头注意力：多个相关性子空间","id":"tf-multi-head","topic":"tf-attention","index":4},{"title":"位置编码补回顺序","id":"tf-position","topic":"tf-attention","index":5},{"title":"自注意力与 CNN、RNN","id":"tf-comparisons","topic":"tf-attention","index":6},{"title":"编码器块的完整路径","id":"tf-encoder-block","topic":"tf-encoder","index":7},{"title":"残差、前馈网络与层归一化","id":"tf-residual-norm","topic":"tf-encoder","index":8},{"title":"Pre-LN、Post-LN 与归一化轴","id":"tf-ln-variants","topic":"tf-encoder","index":9},{"title":"自回归解码与停止条件","id":"tf-autoregressive","topic":"tf-decoder","index":10},{"title":"因果遮罩怎样阻止未来泄漏","id":"tf-causal-mask","topic":"tf-decoder","index":11},{"title":"自回归与非自回归","id":"tf-ar-nar","topic":"tf-decoder","index":12},{"title":"交叉注意力连接输入与输出","id":"tf-cross-attention","topic":"tf-encoder-decoder","index":13},{"title":"训练、推理与 Teacher Forcing","id":"tf-training-inference","topic":"tf-encoder-decoder","index":14},{"title":"束搜索：扩展、剪枝与回溯","id":"tf-beam-search","topic":"tf-encoder-decoder","index":15},{"title":"采样、BLEU 算例与评价优化","id":"tf-generation","topic":"tf-encoder-decoder","index":16},{"title":"前缀分布差异与完整结构回顾","id":"tf-exposure-bias","topic":"tf-encoder-decoder","index":17},{"title":"Encoder-only、Encoder–Decoder、Decoder-only","id":"tf-families","topic":"tf-models","index":18},{"title":"ViT：图像如何成为序列","id":"tf-vit-tokens","topic":"tf-models","index":19},{"title":"ViT 的实验结果与结构局限","id":"tf-vit-limits","topic":"tf-models","index":20},{"title":"Swin：层级结构与 Patch Merging","id":"tf-swin","topic":"tf-models","index":21},{"title":"窗口、移位与相对位置偏置","id":"tf-swin-windows","topic":"tf-models","index":22},{"title":"MoE：专家与路由器","id":"tf-moe-intro","topic":"tf-moe","index":23},{"title":"稀疏参数为什么有吸引力","id":"tf-moe-benefits","topic":"tf-moe","index":24},{"title":"从 Dense FFN 到专家路径","id":"tf-moe-placement","topic":"tf-moe","index":25},{"title":"路由器：选择与加权组合","id":"tf-moe-routing","topic":"tf-moe","index":26},{"title":"路由坍缩、Noisy Top-k 与分配方向","id":"tf-moe-topk","topic":"tf-moe","index":27},{"title":"重要性、CV 与辅助损失","id":"tf-moe-balance","topic":"tf-moe","index":28},{"title":"专家容量与 token 溢出","id":"tf-moe-capacity","topic":"tf-moe","index":29},{"title":"均衡变体与批次效应","id":"tf-moe-balancing-variants","topic":"tf-moe","index":30},{"title":"路由变体、细粒度与共享专家","id":"tf-moe-variants","topic":"tf-moe","index":31},{"title":"视觉 MoE 与批优先路由","id":"tf-vision-moe","topic":"tf-moe","index":32},{"title":"总参数、激活参数与计算账本","id":"tf-moe-systems","topic":"tf-moe","index":33}],"sequences":{"attention-vector":{"kind":"frames","steps":["q₁ 对四个 kᵢ 打分：2、1、0、−1","Softmax：[0.644、0.237、0.087、0.032]","V 提供要汇总的内容：[2、−1、1、0]","逐项加权：[1.288、−0.237、0.087、0]","求和：b₁ ≈ 1.138"]},"attention-matrix":{"kind":"frames","steps":["将全部输入投影为 Q、K、V","第一行：q₁ 对所有 key 打分","所有查询并行形成 N×N 分数矩阵","逐行 Softmax，再乘 V，得到 N 个输出"]},"autoregressive-feedback":{"kind":"frames","steps":["BOS → 深","前缀 BOS 深 → 度","前缀 BOS 深 度 → 学","前缀 BOS 深 度 学 → 习"]},"causal-mask":{"kind":"frames","steps":["查询第 1 个位置：只读位置 1","查询第 2 个位置：只读位置 1、2","查询第 3 个位置：只读位置 1、2、3","查询第 4 个位置：可读全部已有位置"]},"cross-process":{"kind":"frames","steps":["目标 START 形成 q，读取源侧 K、V","加权源信息，预测“机”","加入“机”后，新的 q 重新读取源侧"]},"beam-example":{"kind":"images","files":["image325.png","image328.png","image331.png","image333.png","image335.png","image337.png","image338.png","image342.png","image343.png","image345.png","image346.png","image348.png","image349.png"],"steps":["从 START 计算下一词分布","保留 he (−0.7) 与 I (−0.9)","分别扩展两个前缀","保留 I was (−1.6) 与 he hit (−1.7)","扩展第三个词","保留 he hit me (−2.5) 与 he hit a (−2.8)","扩展第四个词","保留 he hit me with (−3.3) 与 he hit a pie (−3.4)","扩展第五个词","保留 … with a (−3.7) 与 … with one (−4.3)","扩展第六个词","最高分示例路径为 −4.3","回溯：he hit me with a pie"]},"shifted-window":{"kind":"frames","steps":["4×4 个 token；0 至 8 是区域编号，同一区域可能有多个 token","循环左上移一格；四个窗口分别含 4、4、4、4 / 5、3、5、3 / 7、7、1、1 / 8、6、2、0","查询区域 8：同窗口的 6、2、0 来自绕回区域，必须屏蔽"]},"noisy-topk":{"kind":"frames","steps":["加固定示例噪声：[2.5、1.4、0.5、−0.4]","KeepTop2：[2.5、1.4、−∞、−∞]","Softmax：[0.750、0.250、0、0]，计算 E1、E2"]},"capacity-overflow":{"kind":"frames","steps":["What → E1，容量 1/3","is → E1，容量 2/3","Mixture → E1，容量 3/3","of：E1 已满，改投 E4","Experts → E4；? → E4，容量 3/3","Summarize：两个候选均已满，走残差到下一层"]}},"videos":{"patch-embedding":{"file":"media1.mp4","poster":"image367.png","sourcePage":93,"sourceCrop":{"top":67407,"right":1724},"crop":{"top":52000,"right":1724},"caption":"图像切块 → 顺序展开 → 共享线性投影；每块对应一个 token。"}},"attentionExample":{"scores":[2,1,0,-1],"values":[2,-1,1,0]},"expertExample":{"logits":[2.4,1.6,0.2,-0.4],"noise":[0.1,-0.2,0.3,0]},"slides":[{"id":"transformer-task","section":"tf-qkv","topic":"tf-attention","title":"Transformer：序列到序列","caption":"编码输入序列，再生成输出序列","note":"示例将“深度学习”翻译成 Deep Learning；编码源输入，再根据源表示生成目标序列。","page":1},{"id":"transformer-origin","section":"tf-qkv","topic":"tf-attention","title":"Attention Is All You Need","caption":"2017 年提出的 Transformer 架构","note":"论文用注意力、逐位置前馈网络和位置编码组织序列模型。","page":2},{"id":"course-route","section":"tf-qkv","topic":"tf-attention","title":"从机制到完整模型，再到专家层","caption":"自注意力 → 编码器 → 解码器 → 语言与视觉 → MoE","note":"先拆开注意力，再沿原章节组装两侧网络；随后转入语言、视觉和稀疏专家层。","page":3},{"id":"attention-layer","section":"tf-qkv","topic":"tf-attention","title":"用自注意力交换序列信息","caption":"输入或隐藏层中的向量，都可作为序列","note":"每个位置输出一个上下文化向量；前馈层逐位置变换，自注意力连接位置之间。","page":4},{"id":"attention-relevance","section":"tf-qkv","topic":"tf-attention","title":"生成 b₁，需要查看哪些 aᵢ？","caption":"从一个输出位置出发，寻找相关的输入向量","note":"固定 b₁，问哪些 aᵢ 与当前位置相关；打分用于确定信息汇总的权重。","page":5},{"id":"score-functions","section":"tf-qkv","topic":"tf-attention","title":"两种相关性打分方式","caption":"点积与加性打分","note":"把两侧输入分别投影，比较 dot-product 与 additive；接下来采用点积。","page":6},{"id":"query-key","section":"tf-qkv","topic":"tf-attention","title":"固定 q₁，与各位置的 kᵢ 匹配","caption":"q₁ = Wq a₁；kᵢ = Wk aᵢ","note":"Q 表示查询角色，K 表示被查询角色；分数可以为负，还不是概率。","page":7},{"id":"attention-vector","section":"tf-weighted-sum","topic":"tf-attention","title":"从相关性分数生成一个输出","caption":"打分 → Softmax → Value 加权和","note":"Q、K 决定匹配分数，Softmax 形成权重；V 提供被加权的内容。图中标量值是补充算例。","page":8},{"id":"attention-next-query","section":"tf-weighted-sum","topic":"tf-attention","title":"换成 q₂，重新计算一组权重","caption":"同一 K、V；另一个查询，另一个输出","note":"换查询便需要重新打分；K、V 可以复用，b₂ 由自己的关注分布决定。","page":9},{"id":"attention-parallel","section":"tf-weighted-sum","topic":"tf-attention","title":"所有位置可以并行聚合","caption":"a₁…a₄ → b₁…b₄","note":"全部输入已经可用，各查询独立计算，因此所有输出位置能并行更新。","page":10},{"id":"qkv-matrices","section":"tf-scaled-attention","topic":"tf-attention","title":"把所有投影写成矩阵","caption":"X → Q、K、V","note":"统一采用每个位置占一行的记法，投影参数在各位置共享。","page":11},{"id":"attention-matrix","section":"tf-scaled-attention","topic":"tf-attention","title":"一行分数对应一个查询","caption":"QKᵀ → 逐行 Softmax → AV","note":"矩阵的行是查询，列是被查询位置；输出数量等于查询数量。","page":12},{"id":"scaled-attention","section":"tf-scaled-attention","topic":"tf-attention","title":"加入缩放，得到标准公式","caption":"Attention(Q,K,V) = softmax(QKᵀ/√dₖ)V","note":"在理解打分和汇总之后，引入 √dₖ 缩放，控制点积尺度。","page":13},{"id":"animal-it","section":"tf-scaled-attention","topic":"tf-attention","title":"it 指代 animal：关注上下文","caption":"The animal … because it was too tired","note":"观察 it 指向 animal 的连线，把抽象的注意力权重对应到代词与指代对象。","page":14},{"id":"multi-head-branches","section":"tf-multi-head","topic":"tf-attention","title":"两头示例：分别计算关系","caption":"每个头独立投影和聚合","note":"每个头在不同投影子空间独立计算；两组输出随后共同参与当前位置的表示。","page":15},{"id":"multi-head-merge","section":"tf-multi-head","topic":"tf-attention","title":"拼接各头，再做输出投影","caption":"Concat(head₁,…,headₕ)Wᴼ","note":"先拼接各头，再投影回 D 维；头数增加不代表每头必须对应预先命名的语言关系。","page":16},{"id":"multi-head-it","section":"tf-multi-head","topic":"tf-attention","title":"it 同时关注 animal 和 tired","caption":"对比 2 个头与 7 个头的关注连线","note":"同一个 it 同时纳入 animal 与 tired 的信息，原图比较两头与七头的连线。","page":17},{"id":"position","section":"tf-position","topic":"tf-attention","title":"给每个位置加入位置向量","caption":"内容向量 aᵢ + 位置向量 eᵢ","note":"每列是一个位置向量；将 eᵢ 加入 aᵢ，位置方案可以手工设计或从数据学习。","page":18},{"id":"cnn-receptive-field","section":"tf-comparisons","topic":"tf-attention","title":"固定局部连接与内容相关连接","caption":"CNN 的局部共享核；注意力的输入相关权重","note":"卷积以固定局部连接与共享核聚合；自注意力权重依赖输入内容。感受野是比较直觉。","page":19},{"id":"attention-data","section":"tf-comparisons","topic":"tf-attention","title":"结构先验与数据规模","caption":"实验中，小数据和大数据条件下的表现不同","note":"实验中，小数据和大数据条件下的表现不同。","page":20},{"id":"rnn-comparison","section":"tf-comparisons","topic":"tf-attention","title":"串行递推与并行交互","caption":"RNN 沿时间传递；注意力直接连接远处位置","note":"RNN 沿时间串行传递，注意力直接访问远处位置；自回归生成依然依赖已有输出。","page":21},{"id":"encoder-role","section":"tf-encoder-block","topic":"tf-encoder","title":"编码器：序列输入，序列表示输出","caption":"x₁…xₙ → h₁…hₙ","note":"编码器输出与输入位置一一对应，各 hᵢ 结合源序列上下文，为后续任务提供表示。","page":22},{"id":"encoder-stack","section":"tf-encoder-block","topic":"tf-encoder","title":"逐层叠加编码器块","caption":"每层先交换信息，再逐位置变换","note":"自注意力连接各位置，FFN 对每个位置应用同一变换；不同块通常具有各自参数。","page":23},{"id":"encoder-residual","section":"tf-residual-norm","topic":"tf-encoder","title":"把注意力子层补成完整块","caption":"Self-attention → Add & Norm → FFN → Add & Norm","note":"两个子层分别有残差和归一化；LayerNorm 对当前向量的特征统计，并有可学习缩放与偏移。","page":24},{"id":"encoder-bert","section":"tf-residual-norm","topic":"tf-encoder","title":"完整编码器也用于 BERT","caption":"注意力、FFN、残差和归一化重复堆叠","note":"注意力、FFN、残差和归一化重复堆叠。","page":25},{"id":"ln-order","section":"tf-ln-variants","topic":"tf-encoder","title":"归一化放在模块之前还是之后","caption":"Post-LN: LN(x+F(x))；Pre-LN: x+F(LN(x))","note":"沿主残差路径观察：Pre-LN 先处理模块输入，Post-LN 在相加之后归一化。","page":26},{"id":"norm-axes","section":"tf-ln-variants","topic":"tf-encoder","title":"不同归一化方法统计哪些元素","caption":"Batch、Layer、Instance、Group Norm","note":"图示使用 N、C、H、W；语言模型通常对单个 token 的 D 维特征做 LayerNorm。","page":27},{"id":"decoder-role","section":"tf-autoregressive","topic":"tf-decoder","title":"解码器预测下一个 token","caption":"输入条件 + 已有前缀 → 词表分布","note":"输入条件 + 已有前缀 → 词表分布。","page":28},{"id":"decoder-first","section":"tf-autoregressive","topic":"tf-decoder","title":"从 START 生成第一个字","caption":"分布示例：深 0.8；习 0.1","note":"分布覆盖整个词表，已列出的 0.8 与 0.1 之外仍有其他候选；这里使用最大概率选择。","page":29},{"id":"autoregressive-feedback","section":"tf-autoregressive","topic":"tf-decoder","title":"将输出反馈为下一步输入","caption":"START → 深 → 度 → 学 → 习","note":"每个输出进入下一轮前缀；若生成“渡”，模型随后也会读取“渡”。","page":30},{"id":"decoder-length","section":"tf-autoregressive","topic":"tf-decoder","title":"输出长度事先未知","caption":"生成完“深度学习”，仍可能继续","note":"生成完“深度学习”，仍可能继续。","page":31},{"id":"decoder-stop","section":"tf-autoregressive","topic":"tf-decoder","title":"将 END 加入词表","caption":"生成 END 后结束当前序列","note":"EOS 是一次词表预测；生成它后停止，PAD 则用于批次补齐。","page":32},{"id":"decoder-block","section":"tf-causal-mask","topic":"tf-decoder","title":"先隔离解码器自身的路径","caption":"Masked self-attention + FFN","note":"Masked self-attention + FFN。","page":33},{"id":"causal-mask","section":"tf-causal-mask","topic":"tf-decoder","title":"第 i 个位置只读取 j ≤ i","caption":"屏蔽未来分数，再做 Softmax","note":"输入先右移，第 i 个输入位置预测下一词。遮挡未来分数使其 Softmax 权重严格为零。","page":34},{"id":"mask-patterns","section":"tf-causal-mask","topic":"tf-decoder","title":"因果、滑动窗口与分块遮罩","caption":"三种连接范围，三种信息约束","note":"三种连接范围，三种信息约束。","page":35},{"id":"nar-length","section":"tf-ar-nar","topic":"tf-decoder","title":"并行预测多个位置，如何决定长度？","caption":"另设长度预测器，或保留足够输出槽位","note":"另设长度预测器，或保留足够输出槽位。","page":36},{"id":"nar-multimodality","section":"tf-ar-nar","topic":"tf-decoder","title":"并行速度与输出一致性的取舍","caption":"同一输入可能对应多种合理输出","note":"一个输入的多个合理输出模式，可能被独立位置预测混合；任务决定速度与质量的取舍。","page":37},{"id":"cross-role","section":"tf-cross-attention","topic":"tf-encoder-decoder","title":"编码器输出被解码器读取","caption":"Q 来自目标侧；K、V 来自源侧","note":"Q 来自目标侧；K、V 来自源侧。","page":38},{"id":"cross-process","section":"tf-cross-attention","topic":"tf-encoder-decoder","title":"当前解码状态选择源序列信息","caption":"打分、归一化、汇总、预测；下一步重新查询","note":"源侧 K、V 保持可读；从 START 预测“机”后，目标侧新查询再次选择相关源信息。","page":39},{"id":"speech-alignment","section":"tf-cross-attention","topic":"tf-encoder-decoder","title":"语音与输出字符的软对齐","caption":"频谱时间片段 ↔ h、o、w 等字符","note":"Listen, Attend and Spell 的语音示例，用来说明跨序列注意力。","page":40},{"id":"cross-layers","section":"tf-cross-attention","topic":"tf-encoder-decoder","title":"交叉注意力可以连接不同层","caption":"同层、并行、细粒度、全连接与自适应连接","note":"先定位标准交叉注意力，再观察不同层之间的连接，读取来源随连接方案变化。","page":41},{"id":"training-loss","section":"tf-training-inference","topic":"tf-encoder-decoder","title":"用真实下一词监督预测分布","caption":"深的目标概率为 1；最小化交叉熵","note":"深的目标概率为 1；最小化交叉熵。","page":42},{"id":"teacher-forcing","section":"tf-training-inference","topic":"tf-encoder-decoder","title":"真实目标右移一位作为输入","caption":"输入 BOS 深 度 学 习；目标 深 度 学 习 EOS","note":"标签与输入错开一位：BOS 预测深，深预测度，直到习预测 EOS；所有损失可并行计算。","page":43},{"id":"greedy-tree","section":"tf-beam-search","topic":"tf-encoder-decoder","title":"局部最优不保证整条路径最优","caption":"贪心：0.6×0.6×0.4；另一条：0.4×0.9×0.9","note":"贪心：0.6×0.6×0.4；另一条：0.4×0.9×0.9。","page":44},{"id":"beam-example","section":"tf-beam-search","topic":"tf-encoder-decoder","title":"束宽 2：保留两个高分前缀","caption":"he / I → 展开与剪枝 → he hit me with a pie","note":"蓝色数字是累计对数概率，越大越好；最终示例分数 −4.3。","page":45},{"id":"sampling","section":"tf-generation","topic":"tf-encoder-decoder","title":"开放生成需要保留随机性","caption":"比较搜索与采样的文本输出","note":"比较搜索与采样的文本输出。","page":46},{"id":"bleu-definition","section":"tf-generation","topic":"tf-encoder-decoder","title":"BLEU：n-gram 精确率与短句惩罚","caption":"词串匹配 + Brevity Penalty","note":"词串匹配 + Brevity Penalty。","page":47},{"id":"bleu-example","section":"tf-generation","topic":"tf-encoder-decoder","title":"the cat sat on the mat 的算例","caption":"参考：the cat is on the mat","note":"一元 5/6，二元 3/5，BP=1；二元等权 BLEU≈0.707。","page":48},{"id":"metric-optimization","section":"tf-generation","topic":"tf-encoder-decoder","title":"训练目标能否直接对应评价指标？","caption":"离散生成使 BLEU 难以直接反向传播","note":"完整输出的评价是序列级目标；离散 token 选择使直接反向传播困难，可考虑奖励式优化。","page":49},{"id":"exposure-bias","section":"tf-exposure-bias","topic":"tf-encoder-decoder","title":"模型生成“渡”，真实前缀却是“度”","caption":"训练读取真值，推理读取自己的输出","note":"训练读“深度”，推理可能读“深渡”，不同前缀分布会改变后续预测。","page":50},{"id":"scheduled-sampling","section":"tf-exposure-bias","topic":"tf-encoder-decoder","title":"尝试混合真实前缀与模型前缀","caption":"Scheduled Sampling 的三种相关方案","note":"三类相关方案尝试在训练中使用模型前缀，需分别理解其输入选择与并行计算路径。","page":51},{"id":"transformer-summary","section":"tf-exposure-bias","topic":"tf-encoder-decoder","title":"回到完整 Transformer","caption":"源编码 → 交叉读取 → 目标生成","note":"源编码 → 交叉读取 → 目标生成。","page":52},{"id":"model-families","section":"tf-families","topic":"tf-models","title":"三种 Transformer 架构","caption":"BERT、T5、GPT","note":"理解三类架构的任务角色与注意力可见范围，再对应 BERT、T5、GPT。","page":53},{"id":"bert","section":"tf-families","topic":"tf-models","title":"Encoder-only：上下文化表示","caption":"双向读取输入，用于理解与分类","note":"双向读取输入，用于理解与分类。","page":54},{"id":"t5","section":"tf-families","topic":"tf-models","title":"Encoder–Decoder：条件生成","caption":"理解源输入，再生成相关输出","note":"T5 对应编码器—解码器类型；原图是一般 Seq2Seq 角色示意。","page":55},{"id":"gpt","section":"tf-families","topic":"tf-models","title":"Decoder-only：前缀续写","caption":"因果注意力 + 下一词预测","note":"因果注意力 + 下一词预测。","page":56},{"id":"decoder-choice","section":"tf-families","topic":"tf-models","title":"统一序列建模与 KV cache","caption":"训练目标、参数复用与推理缓存","note":"缓存历史 K、V 减少重复投影；当前查询仍读取可见历史，缓存也占用显存。","page":57},{"id":"vision-comparison","section":"tf-vit-tokens","topic":"tf-models","title":"从局部图像结构到全局交互","caption":"CNN 的结构先验与 Transformer 的长距离连接","note":"CNN 的结构先验与 Transformer 的长距离连接。","page":58},{"id":"vit-overview","section":"tf-vit-tokens","topic":"tf-models","title":"ViT：切块、投影、编码与分类","caption":"图像 → patch tokens → Transformer → 类别","note":"图像 → patch tokens → Transformer → 类别。","page":59},{"id":"patch-embedding","section":"tf-vit-tokens","topic":"tf-models","title":"每个 patch 展平并线性投影","caption":"N = HW/P²；每块展平为 P²C 维","note":"224×224、16×16 patch 得到 196 个 token；RGB 每块展平为 768 维，再投影到 D 维。","page":60},{"id":"vit-position","section":"tf-vit-tokens","topic":"tf-models","title":"二维图像也需要位置嵌入","caption":"无位置、一维、二维、相对位置","note":"原始 ViT 用可学习的一维位置嵌入；原图展示位置方案与学到的二维邻近结构。","page":61},{"id":"class-token","section":"tf-vit-tokens","topic":"tf-models","title":"在序列前加入可学习 class token","caption":"输出的 class 状态进入分类头","note":"可学习 class token 加在最前，长度成为 N+1；最终读它的状态进入分类头。","page":62},{"id":"vit-encoder","section":"tf-vit-tokens","topic":"tf-models","title":"对 patch 序列重复编码器块","caption":"Pre-LN → MSA / MLP → 残差","note":"Pre-LN → MSA / MLP → 残差。","page":63},{"id":"vit-sizes","section":"tf-vit-tokens","topic":"tf-models","title":"深度、隐藏维、MLP 与头数","caption":"Base / Large / Huge 的参数配置","note":"Base / Large / Huge 的参数配置。","page":64},{"id":"vit-results","section":"tf-vit-limits","topic":"tf-models","title":"在给定预训练设置下比较表现","caption":"JFT-300M、ImageNet-21k 与计算预算","note":"JFT-300M、ImageNet-21k 与计算预算。","page":65},{"id":"vit-learned-patches","section":"tf-vit-limits","topic":"tf-models","title":"观察学到的 patch 投影模式","caption":"线性投影矩阵的前 40 个主成分","note":"这 40 个小块是学到的线性嵌入滤波器主成分，展示局部纹理与颜色模式。","page":66},{"id":"vit-limitations","section":"tf-vit-limits","topic":"tf-models","title":"固定尺度与全局二次复杂度","caption":"密集预测需要多尺度、高分辨率表示","note":"密集预测需要多尺度、高分辨率表示。","page":67},{"id":"swin-hierarchy","section":"tf-swin","topic":"tf-models","title":"层级特征与局部窗口","caption":"面向分类、检测和分割","note":"面向分类、检测和分割。","page":68},{"id":"swin-architecture","section":"tf-swin","topic":"tf-models","title":"分阶段堆叠 Swin 块","caption":"Patch merging + Swin Transformer block","note":"Patch merging + Swin Transformer block。","page":69},{"id":"patch-merging","section":"tf-swin","topic":"tf-models","title":"把相邻 2×2 token 合并","caption":"H×W×C → H/2×W/2×2C","note":"相邻 2×2 token 拼接到 4C，归一化与投影后为 2C，空间尺寸各减半。","page":70},{"id":"swin-blocks","section":"tf-swin-windows","topic":"tf-models","title":"相邻块交替使用 W-MSA 与 SW-MSA","caption":"固定窗口 → 移位窗口","note":"固定窗口 → 移位窗口。","page":71},{"id":"window-cost","section":"tf-swin-windows","topic":"tf-models","title":"窗口注意力如何降低成本","caption":"固定 M×M 窗口：分数项约为 hwM²","note":"固定 M×M 窗口：分数项约为 hwM²。","page":72},{"id":"shifted-window","section":"tf-swin-windows","topic":"tf-models","title":"移位后，原窗口的 token 能相遇","caption":"循环移位 → 分组 → 遮罩 → 逆移位","note":"数字是区域编号，每格才是一个 token；同区域可互读。查询区域 8 时，绕回的 6、2、0 必须遮挡。","page":73},{"id":"relative-bias","section":"tf-swin-windows","topic":"tf-models","title":"把二维相对位置加入分数","caption":"softmax(QKᵀ/√d + B)V","note":"每对 query/key 根据相对行列位移查表，将位置偏置加到兼容度分数。","page":74},{"id":"swin-specs","section":"tf-swin-windows","topic":"tf-models","title":"Swin-T、S、B、L 的结构配置","caption":"各阶段深度、通道、头数与输出尺度","note":"各阶段深度、通道、头数与输出尺度。","page":75},{"id":"swin-classification","section":"tf-swin-windows","topic":"tf-models","title":"分类实验：配置与表现一起读","caption":"ImageNet-1k 与 22k 预训练结果","note":"ImageNet-1k 与 22k 预训练结果。","page":76},{"id":"swin-dense-results","section":"tf-swin-windows","topic":"tf-models","title":"检测和分割展示层级特征的用途","caption":"COCO 与 ADE20K 的任务结果","note":"COCO 与 ADE20K 的任务结果。","page":77},{"id":"moe-components","section":"tf-moe-intro","topic":"tf-moe","title":"一组专家，加一个路由器","caption":"Experts 处理输入；Router 选择路径","note":"Experts 处理输入；Router 选择路径。","page":78},{"id":"expert-meaning","section":"tf-moe-intro","topic":"tf-moe","title":"专家针对 token 与上下文分工","caption":"标点、词形、语法和使用环境","note":"分工常发生在 token 与上下文层面；每个专家依然只是模型某层的前馈子网络。","page":79},{"id":"expert-submodel","section":"tf-moe-intro","topic":"tf-moe","title":"每层选择一个或多个专家","caption":"专家是模型某层的子网络","note":"专家是模型某层的子网络。","page":80},{"id":"moe-flops","section":"tf-moe-benefits","topic":"tf-moe","title":"相近激活 FLOPs 下扩大容量","caption":"实验中，更多参数可改善损失","note":"实验中，更多参数可改善损失。","page":81},{"id":"moe-training-results","section":"tf-moe-benefits","topic":"tf-moe","title":"比较训练效率","caption":"Switch 与 OLMoE 的损失、速度曲线","note":"Switch 与 OLMoE 的损失、速度曲线。","page":82},{"id":"moe-dense-comparison","section":"tf-moe-benefits","topic":"tf-moe","title":"性能与激活参数的对照","caption":"MoE 与 dense 模型的实验比较","note":"MoE 与 dense 模型的实验比较。","page":83},{"id":"dense-ffn","section":"tf-moe-placement","topic":"tf-moe","title":"先回顾 Transformer 的 FFN","caption":"注意力形成上下文，FFN 进一步变换","note":"注意力形成上下文，FFN 进一步变换。","page":84},{"id":"dense-sparse","section":"tf-moe-placement","topic":"tf-moe","title":"dense 全部计算，sparse 选择计算","caption":"当前 token 只经过部分参数","note":"当前 token 只经过部分参数。","page":85},{"id":"expert-evidence","section":"tf-moe-placement","topic":"tf-moe","title":"专家学到了什么？看路由证据","caption":"细粒度分工表与 Mixtral token 着色","note":"细粒度分工表与 Mixtral token 着色。","page":86},{"id":"expert-ffn","section":"tf-moe-placement","topic":"tf-moe","title":"每个专家可是一整个 FFN","caption":"逐层路由，不等于多个完整 LLM","note":"逐层路由，不等于多个完整 LLM。","page":87},{"id":"expert-paths","section":"tf-moe-placement","topic":"tf-moe","title":"不同 token 经过不同专家路径","caption":"同一句话、不同位置、不同层","note":"同一句话、不同位置、不同层。","page":88},{"id":"expert-placement","section":"tf-moe-placement","topic":"tf-moe","title":"在块中用 MoE 替换 FFN","caption":"常见：MLP；较少见：注意力头","note":"常见做法将 FFN 替换成 MoE，注意力子层保留；先明确模块，再统计专家数量。","page":89},{"id":"router-role","section":"tf-moe-routing","topic":"tf-moe","title":"为当前 token 选择专家","caption":"路由概率 → 选中专家 → 加权输出","note":"路由概率 → 选中专家 → 加权输出。","page":90},{"id":"dense-sparse-moe","section":"tf-moe-routing","topic":"tf-moe","title":"Dense MoE 与 Sparse MoE","caption":"计算全部专家，或只计算所选专家","note":"计算全部专家，或只计算所选专家。","page":91},{"id":"router-formula","section":"tf-moe-routing","topic":"tf-moe","title":"输入经过路由权重与 Softmax","caption":"H(x)=xW；G(x)=softmax(H(x))","note":"路由概率决定路径和输出加权；选中集合内是否重新归一化，需要按具体方案区分。","page":92},{"id":"router-flow","section":"tf-moe-routing","topic":"tf-moe","title":"把路由和专家计算连起来","caption":"输入 x → 门控 → 专家 → 加权和","note":"输入 x → 门控 → 专家 → 加权和。","page":93},{"id":"router-collapse","section":"tf-moe-topk","topic":"tf-moe","title":"反复选择少数专家产生正反馈","caption":"热点过载；其他专家训练不足","note":"热点过载；其他专家训练不足。","page":94},{"id":"noisy-topk","section":"tf-moe-topk","topic":"tf-moe","title":"加入噪声，再保留 Top-k 分数","caption":"未选项置为 −∞，Softmax 后权重为 0","note":"固定一次示例噪声以便核算；实际噪声用于探索，未选 logits 设为负无穷。","page":95},{"id":"token-choice","section":"tf-moe-topk","topic":"tf-moe","title":"Token Choice：每个 token 选专家","caption":"Top-1 与 Top-2 的计算与加权组合","note":"Top-1 与 Top-2 的计算与加权组合。","page":96},{"id":"routing-directions","section":"tf-moe-topk","topic":"tf-moe","title":"三种分配方向","caption":"token 选专家；专家选 token；全局匹配","note":"token 选专家；专家选 token；全局匹配。","page":97},{"id":"routing-evidence","section":"tf-moe-topk","topic":"tf-moe","title":"比较 Token / Expert Choice","caption":"查看损失与任务指标","note":"查看损失与任务指标。","page":98},{"id":"importance","section":"tf-moe-balance","topic":"tf-moe","title":"汇总一个批次的专家重要性","caption":"Importanceᵢ = ∑ₓ Gᵢ(x)","note":"Importanceᵢ = ∑ₓ Gᵢ(x)。","page":99},{"id":"importance-cv","section":"tf-moe-balance","topic":"tf-moe","title":"用 CV 衡量重要性差异","caption":"CV = 标准差 / 均值","note":"保留两组原始向量，统一按总体标准差重算：CV 约 1.005 与 0.188。","page":100},{"id":"cv-loss","section":"tf-moe-balance","topic":"tf-moe","title":"CV² 构成重要性辅助损失","caption":"L = Ltask + wimportance · CV(Importance)²","note":"L = Ltask + wimportance · CV(Importance)²。","page":101},{"id":"token-load","section":"tf-moe-capacity","topic":"tf-moe","title":"概率重要性之外，还要看实际 token 数","caption":"不同 token 可能集中送向同一专家","note":"不同 token 可能集中送向同一专家。","page":102},{"id":"capacity-overflow","section":"tf-moe-capacity","topic":"tf-moe","title":"专家满员后，token 如何继续？","caption":"备选专家也满员时，跳过当前专家分支","note":"每个专家容量为 3。先尝试备选专家；两个候选都满员时，走残差而跳过当前专家分支。","page":103},{"id":"switch-top1","section":"tf-moe-capacity","topic":"tf-moe","title":"Switch 用 Top-1 路由","caption":"每个 token 计算一个专家","note":"每个 token 计算一个专家。","page":104},{"id":"capacity-factor","section":"tf-moe-capacity","topic":"tf-moe","title":"用容量因子控制缓冲区","caption":"6 个 token / 3 个专家 × 1.0 = 容量 2","note":"6 个 token / 3 个专家 × 1.0 = 容量 2。","page":105},{"id":"switch-loss","section":"tf-moe-capacity","topic":"tf-moe","title":"Switch 的辅助损失有两种统计量","caption":"实际比例 fᵢ 与平均概率 pᵢ","note":"fᵢ 是实际分配比例，pᵢ 是平均路由概率；不同统计量共同构成求和后的辅助损失。","page":106},{"id":"device-balance","section":"tf-moe-balancing-variants","topic":"tf-moe","title":"均衡既可以按专家，也可以按设备","caption":"将同一设备上的专家统计量合并","note":"将同一设备上的专家统计量合并。","page":107},{"id":"expert-bias","section":"tf-moe-balancing-variants","topic":"tf-moe","title":"用专家偏置调整分配倾向","caption":"按负载更新选择偏置","note":"选择偏置按负载在线调整；原 DeepSeek-V3 方案仍保留序列级辅助项。","page":108},{"id":"balance-ablation","section":"tf-moe-balancing-variants","topic":"tf-moe","title":"去掉均衡损失会发生什么？","caption":"损失曲线与专家负载分布","note":"损失曲线与专家负载分布。","page":109},{"id":"batch-effects","section":"tf-moe-balancing-variants","topic":"tf-moe","title":"批次容量会影响同一 token 的路径","caption":"其他 token 占用槽位，可能改变溢出结果","note":"其他 token 占用槽位，可能改变溢出结果。","page":110},{"id":"routing-variants","section":"tf-moe-variants","topic":"tf-moe","title":"Top-k、哈希、RL 与匹配路由","caption":"不同选择规则形成不同条件计算","note":"不同选择规则形成不同条件计算。","page":111},{"id":"fine-shared","section":"tf-moe-variants","topic":"tf-moe","title":"更多细粒度专家与始终开启的共享专家","caption":"可组合路径 + 公共变换","note":"可组合路径 + 公共变换。","page":112},{"id":"deepseek-ablation","section":"tf-moe-variants","topic":"tf-moe","title":"DeepSeek 消融：细粒度与共享专家","caption":"在该配置下，增加两类设计有收益","note":"在该配置下，增加两类设计有收益。","page":113},{"id":"olmoe-ablation","section":"tf-moe-variants","topic":"tf-moe","title":"OLMoE：细粒度有益，共享专家未见收益","caption":"保留与前一组实验不同的结论","note":"这一组实验没有显示共享专家收益，与前一组结果不同；设计效果需要按实验配置解释。","page":114},{"id":"vision-moe-input","section":"tf-vision-moe","topic":"tf-moe","title":"图像 patch 也能作为路由输入","caption":"图像 → patch tokens → 编码器","note":"图像 → patch tokens → 编码器。","page":115},{"id":"vision-moe-layer","section":"tf-vision-moe","topic":"tf-moe","title":"V-MoE 用稀疏专家替换编码器 FFN","caption":"注意力保持，前馈层变为条件计算","note":"注意力保持，前馈层变为条件计算。","page":116},{"id":"patch-overflow","section":"tf-vision-moe","topic":"tf-moe","title":"小容量会丢弃部分 patch 分支","caption":"原图只剩局部内容可被专家处理","note":"原图只剩局部内容可被专家处理。","page":117},{"id":"patch-priority","section":"tf-vision-moe","topic":"tf-moe","title":"先处理重要 patch，再分配容量","caption":"Batch Priority Routing","note":"Batch Priority Routing。","page":118},{"id":"patch-retention","section":"tf-vision-moe","topic":"tf-moe","title":"从全部 patch 到只保留 10%","caption":"比较保留 80%、50%、10% 时的位置","note":"观察保留位置是否覆盖关键对象；减少的是专家分支处理量，不能等同于全部编码器计算。","page":119},{"id":"sparse-active","section":"tf-moe-systems","topic":"tf-moe","title":"加载全部专家，每个 token 使用部分专家","caption":"总参数影响存储，激活参数影响计算","note":"总参数影响存储，激活参数影响计算。","page":120},{"id":"mixtral-parameters","section":"tf-moe-systems","topic":"tf-moe","title":"Mixtral 8×7B 的真实参数账本","caption":"每专家约 5.6B；总量约 46.7B；激活约 12.8B","note":"账本区分共享参数、8 个专家的总量与 Top-2 激活量；实际延迟还依赖通信和硬件。","page":121},{"id":"moe-summary","section":"tf-moe-systems","topic":"tf-moe","title":"稀疏性、路由和系统成本共同决定效果","caption":"容量、质量、激活计算、存储与通信","note":"容量、质量、激活计算、存储与通信。","page":122}]}</script><script src="script.js"></script><script src="vendor/katex/katex.min.js"></script><script src="transformer-models.js?v=20261009-2"></script></body></html>

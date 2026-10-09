@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="417" viewBox="0 0 960 417" role="img" aria-label="Artificial Intelligence → Deep Learning"><title>Artificial Intelligence → Deep Learning</title><desc>三个自上而下嵌套的圆层分别表示人工智能、机器学习和深度学习；圆内标注各自目标，圈层之间说明方法与技术关系。</desc><defs><marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="none" stroke="#176653" stroke-width="1.7"/></marker><marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="none" stroke="#b47936" stroke-width="1.7"/></marker></defs><rect width="960" height="417" fill="#fbfdfb"/><g font-family="PingFang SC,Microsoft YaHei,Arial,sans-serif"><text x="48" y="43" fill="#263f35" font-size="22" font-weight="650" text-anchor="start"><tspan x="48" dy="0">Artificial Intelligence → Deep Learning</tspan></text><text x="48" y="69" fill="#667f72" font-size="13" font-weight="400" text-anchor="start"><tspan x="48" dy="0">从宽泛目标逐步进入具体技术</tspan></text>
+  <path d="M70 119 V346" stroke="#263f35" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+  <text x="70" y="101" fill="#667f72" font-size="13" font-weight="400" text-anchor="middle"><tspan x="70" dy="0">宽泛概念</tspan></text>
+  <text x="70" y="374" fill="#667f72" font-size="13" font-weight="400" text-anchor="middle"><tspan x="70" dy="0">具体技术</tspan></text>
+  <circle cx="330" cy="235" r="165" fill="#edf3f0" stroke="#a8c2b4" stroke-width="1.6"/>
+  <circle cx="330" cy="260" r="120" fill="#d6e9df" stroke="#a8c2b4" stroke-width="1.6"/>
+  <circle cx="330" cy="295" r="72" fill="#176653" stroke="#176653" stroke-width="1.6"/>
+  <text x="330" y="100" fill="#263f35" font-size="17" font-weight="650" text-anchor="middle"><tspan x="330" dy="0">人工智能 AI</tspan></text>
+  <text x="330" y="126" fill="#667f72" font-size="13" font-weight="400" text-anchor="middle"><tspan x="330" dy="0">使计算机完成需要智能的任务</tspan></text>
+  <text x="330" y="166" fill="#176653" font-size="16" font-weight="650" text-anchor="middle"><tspan x="330" dy="0">机器学习 ML</tspan></text>
+  <text x="330" y="191" fill="#667f72" font-size="12" font-weight="400" text-anchor="middle"><tspan x="330" dy="0">从数据中学习规律</tspan><tspan x="330" dy="18">用于分析或预测</tspan></text>
+  <text x="330" y="285" fill="#ffffff" font-size="15" font-weight="650" text-anchor="middle"><tspan x="330" dy="0">深度学习 DL</tspan></text>
+  <text x="330" y="309" fill="#ffffff" font-size="12" font-weight="400" text-anchor="middle"><tspan x="330" dy="0">用多层神经网络</tspan><tspan x="330" dy="17">自动学习数据表示</tspan></text>
+  <path d="M442 255 C540 265 555 210 493 188" stroke="#176653" stroke-width="3" fill="none" marker-end="url(#arrow-green)"/>
+  <text x="680" y="147" fill="#176653" font-size="15" font-weight="650" text-anchor="middle"><tspan x="680" dy="0">机器学习为实现人工智能提供方法</tspan></text>
+  <path d="M399 301 C470 320 505 293 449 272" stroke="#b47936" stroke-width="3" fill="none" marker-end="url(#arrow-orange)"/>
+  <text x="680" y="258" fill="#b47936" font-size="15" font-weight="650" text-anchor="middle"><tspan x="680" dy="0">深度学习为实现机器学习提供技术</tspan></text></g></svg>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="人工神经网络基础第一讲：从多层感知机到训练与案例分析。" />
+    <title>人工神经网络基础 · AI 工程学</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="intro-presentation.css?v=20261010-1" />
+  </head>
+  <body class="intro-page">
+    <a class="skip-link" href="#main-content">跳转至正文</a>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="AI 工程学课程首页">
+        <span class="brand-mark" aria-hidden="true">⌬</span>
+        <span>AI 工程学<small>AI ENGINEERING</small></span>
+      </a>
+      <nav class="header-nav" aria-label="网站导航">
+        <a href="index.html">课程概览</a>
+        <a class="current" href="lectures.html">课程讲义</a>
+        <a href="downloads.html">下载课件（PDF）</a>
+        <span class="institution">⌂　上海创智学院</span>
+      </nav>
+      <button class="mobile-menu" type="button" aria-label="打开导航" aria-expanded="false">☰</button>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="课程目录">
+        <div class="sidebar-heading">课程讲义 <span>LECTURES</span></div>
+        <a class="overview-link" href="lectures.html">◈　课程讲义目录</a>
+        <div class="nav-part intro-sidebar-nav">
+          <p>第一讲 <span>FOUNDATIONS</span></p>
+          <a class="active" href="#topic-mango"><b>01</b>人工神经网络基础</a>
+          <a href="cnn-image-recognition.html#cnn-classification"><b>02</b>CNN 与图像识别</a>
+          <a href="rnn-lstm-sequence-modeling.html#rnn-sequence-data"><b>03</b>RNN 与 LSTM</a>
+          <a href="transformer-models.html#tf-qkv"><b>04</b>Transformer 模型</a>
+          <a href="lectures.html#lecture-5"><b>05</b>自监督学习</a>
+        </div>
+        <a class="sidebar-resource" href="index.html#assessment">课程考核</a>
+        <a class="sidebar-resource" href="index.html#faculty">授课团队</a>
+        <a class="sidebar-resource download-resource" href="downloads.html">↓　下载课件</a>
+        <div class="sidebar-footer">上海创智学院 <span>2026 秋季</span></div>
+      </aside>
+
+      <div class="site-body">
+        <div class="breadcrumb"><span>AI 工程学　›　第一讲　›　人工神经网络基础</span><span>Fundamentals of ANNs</span></div>
+        <main id="main-content" class="reading-layout intro-reading-layout">
+          <div class="home-content">
+            <header class="course-intro intro-lecture-header">
+              <div class="eyebrow"><i></i>第一讲 · 人工神经网络基础</div>
+              <h1>人工神经网络基础</h1>
+              <p class="english-title">Fundamentals of Artificial Neural Networks</p>
+              <p class="intro-copy">从芒果识别出发，建立机器学习与深度学习的直观区别；再从神经元、训练闭环和两个案例，走完一条可学习模型的完整路线。</p>
+              <div class="intro-modebar" role="tablist" aria-label="讲义模式">
+                <button class="button primary" type="button" role="tab" aria-selected="true" data-mode-button="read">▣ 阅读模式</button>
+                <button class="button secondary" type="button" role="tab" aria-selected="false" data-mode-button="slides">▷ 演示模式</button>
+                <span class="intro-page-count">7 条线索 · 111 个演示步骤</span>
+              </div>
+            </header>
+
+            <div id="read-mode" class="intro-mode-panel" role="tabpanel">
+              <section class="intro-topic" id="topic-mango" data-topic="topic-mango">
+                <div class="article-section-label"><span>引言与概览 / 01</span><button type="button" data-present-topic="topic-mango">▷ 演示本节</button></div>
+                <h2>从芒果识别进入机器学习</h2>
+                <p>先考虑两个直观问题：怎样判断一个水果是不是芒果，以及怎样判断一个芒果是否甜。我们会观察颜色、形状、纹理和成熟度，也会利用过去见过、尝过的水果积累经验。机器学习（<strong>Machine Learning, ML</strong>）把这条思路变成可训练的方法：从带有答案的样本中学习规律，再对新水果作出判断。</p>
+                <div class="ann-reading-figure" data-reading-slide="mango-tasks"><img src="media/intro/presentation/mango.png" width="640" height="480" alt="用同一个芒果讨论品种与是否甜的判断" /></div>
+                <p>可观察的信息称为特征（<strong>feature</strong>），已确认的答案称为标签（<strong>label</strong>）。“是不是芒果”和“是否甜”都可以输出离散类别，属于分类（<strong>classification</strong>）。进一步延伸，如果问题改成“甜度或糖度是多少”，输出连续数值，才对应回归（<strong>regression</strong>）。</p>
+                <p>传统机器学习通常先由人决定应该观察哪些特征，再训练分类器（<strong>classifier</strong>）；深度学习（<strong>Deep Learning, DL</strong>）则让多层神经网络同时学习“应该看什么”和“怎样分类”。两者都从数据中学习，主要区别不是有没有模型，而是特征表示主要依靠人工设计，还是由模型自动学习。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/4.svg" width="960" height="417" alt="传统机器学习先人工设计特征再分类，深度学习联合学习特征提取器和分类层" /><figcaption>人工设计特征与自动学习表示的区别。</figcaption></figure>
+                <p>训练时，模型先通过前向传播（<strong>forward propagation</strong>）给出预测，再用损失函数（<strong>loss function</strong>）衡量预测与标签的差异，并通过反向传播（<strong>backpropagation</strong>）和优化器（<strong>optimizer</strong>）调整参数。这个过程反复进行；实际预测时只需要输入、训练好的模型和输出。</p>
+                <div class="ann-reading-figure" data-reading-slide="mango-train"><p>输入 → 模型 → 预测；预测与标签计算损失，梯度和优化器更新模型参数。</p></div>
+              </section>
+
+              <section class="intro-topic" id="topic-ai" data-topic="topic-ai">
+                <div class="article-section-label"><span>引言与概览 / 02</span><button type="button" data-present-topic="topic-ai">▷ 演示本节</button></div>
+                <h2>从 AI 的兴盛回到起源与研究路线</h2>
+                <p>人工智能的兴盛也体现在科学研究方法的变化上。2018 年图灵奖认可了深度学习的基础贡献；2024 年诺贝尔物理学奖认可了通过人工神经网络实现机器学习的基础性发现与发明，同年的诺贝尔化学奖相关成果包括 AlphaFold 的蛋白质结构预测。学习模型开始帮助研究者从复杂数据中寻找规律，并服务于具体科学问题。</p>
+                <p>人工智能（<strong>Artificial Intelligence, AI</strong>）已经广泛进入生物制药、自动驾驶、人形机器人和大语言模型等领域。在生物制药中，AlphaFold 等系统根据生物分子信息预测结构；自动驾驶系统从道路图像和传感器数据中识别车辆、行人与可行驶区域；人形机器人利用身体状态反馈维持平衡并控制动作；大语言模型根据文本上下文生成回答、摘要或代码。它们的输入、目标与评价标准并不相同，却都被称为人工智能。这就需要先回答一个更基础的问题：机器表现出什么能力时，我们会认为它具有智能？</p>
+                <figure class="intro-visual"><img src="diagrams/intro/7.svg?v=20261007-10" width="960" height="417" alt="自动驾驶道路分割、AlphaFold结构预测、人形机器人运动控制和大语言模型部署指标四个应用案例" /><figcaption>四个领域分别对应道路感知、结构预测、动作控制和语言生成任务。</figcaption></figure>
+                <p>对智能的讨论并不是在今天才出现。图灵（<strong>Alan Turing</strong>）提出的模仿游戏，把抽象的“机器是否思考”改写为可以观察的对话表现。图灵测试（<strong>Turing Test</strong>）让询问者与身份隐藏的人类和机器进行文字问答，再根据回答判断身份。它关注受测条件下的语言行为，不能单独证明系统具有理解、意识或通用智能。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/10.svg?v=20261010-1" width="960" height="417" alt="询问者通过文字问答判断隐藏回答者的身份；对话行为检验与通用智能判断具有不同的证据范围" /><figcaption>身份隐藏使判断依据集中在回答内容和对话行为上。</figcaption></figure>
+                <p>图灵在 1950 年曾预测，未来机器可以在五分钟问答中使普通询问者正确识别身份的概率不超过 70%。这是有具体时间条件的历史预测，不是所有图灵测试的统一通过规则。</p>
+                <h3>从一轮回答到多轮历史</h3>
+                <div class="ann-reading-figure" data-reading-slide="dialog-context"><p>同样连续询问三次，固定系统重复“是的”，利用历史的系统则识别出重复提问。</p></div>
+                <p>连续提问“你会下国际象棋吗？”时，固定规则系统可能每次给出同样回答，而利用对话历史的系统会根据重复提问调整表达。大语言模型（<strong>Large Language Model, LLM</strong>）也能为同一问题生成多种措辞。两个 AI 助手甚至可以轮流接话，使交流在表面上接近人类对话；这与图灵测试关注的可观察语言行为相呼应，但语言自然并不能单独证明系统真正理解了谈话内容。</p>
+                <figure class="intro-media-explainer"><div class="intro-media-copy"><span>观察重点</span><h3>像人一样对话，不等于具备通用智能</h3><p>片段中的两个 AI 助手能够轮流回应并维持对话。这说明系统可以生成连贯的语言行为，却不能据此判断它是否理解现实、能否学习陌生任务，或能否把已有知识迁移到新的问题。</p></div><video controls preload="metadata" playsinline src="media/intro/media1.mp4" aria-label="两个 AI 语音助手轮流交谈的视频"></video><figcaption>两个 AI 助手的连续对话实验。</figcaption></figure>
+                <p>类人对话只是智能的一种外在表现。弱人工智能（<strong>Weak AI</strong>）通常在边界明确的任务中表现良好；通用人工智能（<strong>Artificial General Intelligence, AGI</strong>）则追求更广泛的能力，包括理解情境和目标、从新经验中学习、运用知识推理，以及把已有能力迁移到不同任务与环境。于是，问题便从“机器能否表现得像人”进一步转向“这些能力应当通过什么机制实现”，不同回答由此形成了不同的研究流派。</p>
+                <p>20 世纪 40 至 50 年代，数理逻辑、控制论、信息论、形式神经元和图灵提出的机器智能问题共同构成早期基础。此后，符号主义、联结主义和行为主义先后兴起：它们在时间上相互交叠，并不是前一种思想结束后，后一种思想才开始。沿着这条发展线索，可以看到研究重点从显式符号与逻辑推理，扩展到神经元连接学习，再扩展到智能体与环境之间的感知、行动和反馈。</p>
+                <figure class="intro-visual" id="schools-timeline"><img src="diagrams/intro/15.svg?v=20261009-2" width="960" height="417" alt="一条时间线从二十世纪四十至五十年代的早期基础，依次串联符号主义、联结主义、行为主义和现代融合发展" /><figcaption>三种人工智能流派的演进与融合。</figcaption></figure>
+                <div class="intro-school-comparison" aria-label="人工智能三种主要流派对照">
+                  <article><h3>符号主义 <span>Symbolism</span></h3><dl><dt>核心</dt><dd>从数理逻辑出发，用符号、知识和规则表达问题，再通过逻辑运算进行推理。</dd><dt>优势与局限</dt><dd>规则清晰、推理过程较易解释；但面对模糊或不确定的信息时容易变得脆弱，知识获取与规则维护的成本也较高。</dd><dt>典型领域</dt><dd>知识表示与推理、专家系统、搜索与规划、规则约束，以及基于规则的语言处理。</dd></dl></article>
+                  <article><h3>联结主义 <span>Connectionism</span></h3><dl><dt>核心</dt><dd>受人脑神经网络启发，用大量相互连接的计算单元组成可学习的人工神经网络。</dd><dt>优势与局限</dt><dd>擅长从复杂数据中学习模式和表示；但训练通常需要较多数据、时间和计算资源，内部决策也较难直接解释。</dd><dt>典型领域</dt><dd>图像识别、语音识别、自然语言处理、深度学习以及生成式模型。</dd></dl></article>
+                  <article><h3>行为主义 <span>Behavior-based AI</span></h3><dl><dt>核心</dt><dd>强调控制论、身体和环境，通过感知—行动闭环及反馈形成智能行为。</dd><dt>优势与局限</dt><dd>能够持续处理环境信息，适合实时交互和身体控制；但获取交互经验的成本较高，还要处理计算、安全、稳定性和迁移问题。</dd><dt>典型领域</dt><dd>机器人、自主控制系统、强化学习以及具身智能。</dd></dl></article>
+                </div>
+                <p>三种流派既有区别，也持续相互影响。联结主义推动了神经网络与深度学习，行为主义强调的环境反馈与强化学习密切相关；符号主义并未被淘汰，仍用于知识表示、规划、规则约束与结果检查，并能与学习模型结合。</p>
+              </section>
+
+              <section class="intro-topic" id="topic-ai-deep-learning" data-topic="topic-ai-deep-learning">
+                <div class="article-section-label"><span>引言与概览 / 03</span><button type="button" data-present-topic="topic-ai-deep-learning">▷ 演示本节</button></div>
+                <h2>从人工智能到深度学习</h2>
+                <p>人工智能（<strong>Artificial Intelligence, AI</strong>）是最宽的目标和研究范围，关注如何让计算机完成通常需要智能的任务。机器学习（<strong>Machine Learning, ML</strong>）是实现其中一部分目标的方法，让系统从数据中学习规律并作出分析或预测。深度学习（<strong>Deep Learning, DL</strong>）则是机器学习中的一类具体技术，使用多层神经网络自动学习数据表示。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/16.svg?v=20261007-15" width="960" height="417" alt="三个自上而下嵌套的圆层分别表示人工智能、机器学习和深度学习，圆内标注各自目标，圈层之间说明机器学习提供实现人工智能的方法、深度学习提供实现机器学习的技术" /><figcaption>从人工智能目标到机器学习方法和深度学习技术。</figcaption></figure>
+                <p>从人工智能到机器学习再到深度学习，研究范围逐步收窄，实现方式也逐步具体。机器学习不是实现人工智能的唯一方法，人工智能还包括规则推理、搜索与规划等方法；深度学习也不是机器学习的全部。</p>
+                <p>因此，从人工智能进入深度学习，并不是把人工智能等同于深度学习，而是选择其中一条影响广泛的技术路线继续展开。接下来将沿着联结主义的发展线索，梳理深度学习的关键阶段。</p>
+              </section>
+
+              <section class="intro-topic" id="topic-deep-learning" data-topic="topic-deep-learning">
+                <div class="article-section-label"><span>引言与概览 / 04</span><button type="button" data-present-topic="topic-deep-learning">▷ 演示本节</button></div>
+                <h2>深度学习的发展</h2>
+                <p>深度学习的发展并不是一条持续上升的直线。形式神经元提出了计算抽象，感知机把学习引入模型，反向传播使多层网络能够训练；随后，算法、计算能力和数据规模逐步汇合，才推动深度学习进入广泛应用阶段。</p>
+                <ol class="intro-history-list" aria-label="深度学习发展的关键时间点">
+                  <li><time datetime="1943">1943</time><div><h3>M-P 神经元模型</h3><p>McCulloch 和 Pitts 提出 M-P 神经元模型（<strong>McCulloch–Pitts Neuron Model</strong>），把神经元抽象为“带权输入汇总后与阈值比较”的计算单元。连接权重表示不同输入的影响，阈值决定神经元是否激活，为人工神经网络提供了最早的形式化基础。</p></div></li>
+                  <li><time>1958–1969</time><div><h3>感知机与早期兴盛</h3><p>1958 年的感知机（<strong>Perceptron</strong>）和 1960 年的自适应线性神经元（<strong>Adaline</strong>）让连接权重能够从数据中调整。早期模型常用阶跃函数给出 0 或 1 的输出；平滑的 Sigmoid 函数则为后续可微模型提供了另一种激活方式。1969 年对单层感知机能力边界的系统分析，也暴露了当时模型的局限。</p></div></li>
+                  <li><time>1976–1982</time><div><h3>第一次低谷</h3><p>有限的计算能力、较高的计算复杂度和工程实现难度，使早期神经网络难以达到预期效果，相关研究和投入随之降温。</p></div></li>
+                  <li><time datetime="1986">1986</time><div><h3>多层网络重新受到关注</h3><p>神经网络（<strong>Neural Network</strong>）由相互连接、能够调整权重的简单单元组成。反向传播（<strong>Backpropagation</strong>）能够把输出误差逐层传回网络并更新参数，使多层网络的训练成为可行方法，推动联结主义再次兴起。</p></div></li>
+                  <li><time>1990s–2005</time><div><h3>深层网络的沉寂期</h3><p>深层网络仍受到训练困难、计算资源不足、可用数据有限和效果不稳定等问题制约。支持向量机（SVM）、Boosting 等传统机器学习方法在这一时期得到更广泛应用。</p></div></li>
+                  <li><time datetime="2006">2006</time><div><h3>深度学习复兴</h3><p>深度信念网络（<strong>Deep Belief Network</strong>）等研究表明，更好的模型设计和训练方式可以改善深层网络。与此同时，计算能力提升和大规模数据逐渐具备，深度模型重新成为重要研究方向。</p></div></li>
+                  <li><time datetime="2012">2012</time><div><h3>AlexNet 带来性能跃迁</h3><p>AlexNet 在 ImageNet 大规模视觉识别挑战中把 top-5 错误率降至约 15.3%，明显低于第二名约 26.2%。统一基准上的显著差距，使深度学习进入快速发展阶段。</p></div></li>
+                  <li><time>2014–2018</time><div><h3>模型结构持续突破</h3><p>Seq2Seq 和生成对抗网络（GAN）拓展了序列建模与生成任务，ResNet 支持训练更深的网络，Transformer 以注意力机制改变序列处理方式，BERT 与 GPT-1 则推动大规模预训练模型发展。</p></div></li>
+                  <li><time>2019–2024</time><div><h3>生成、多模态与推理能力扩展</h3><p>GPT 系列、CLIP、DALL-E、扩散模型和 ChatGPT 等把深度学习扩展到文本生成、图像生成和多模态任务，模型开始在统一表示基础上处理更广泛的输入与输出。</p></div></li>
+                  <li><time>现在与未来</time><div><h3>怎样更有效地利用丰富的数据</h3><p>大数据提供丰富信息，也要求模型具备合适的表示能力。更深的网络组合层次化特征，更广的输入帮助捕捉上下文，领域知识则约束合理的表示和模型容量，让学习更有效率。</p></div></li>
+                </ol>
+                <div class="ann-reading-figure" data-reading-slide="history-9"><p>层次化特征学习、上下文信息与领域知识共同影响表示能力和学习效率。</p></div>
+                <p>这些方向重新连接到特征学习（<strong>Feature Learning</strong>）：让特征转换器与分类器共同优化，利用数据学习适合任务的表示。迁移学习和多模态应用是这条路线的进一步延伸。</p>
+              </section>
+
+              <section class="intro-topic" id="topic-mlp" data-topic="topic-mlp">
+                <div class="article-section-label"><span>多层感知机 / 05</span><button type="button" data-present-topic="topic-mlp">▷ 演示本节</button></div>
+                <h2>多层感知机：把输入变成可学习的非线性函数</h2>
+                <p>前面已经看到，深度学习使用多层网络学习数据表示。现在从最小的计算单元开始：一个人工神经元接收一组数值输入，按各自的重要性加权，再决定向下一层传递什么信息。许多这样的单元并排组成层，层与层相连，便形成多层感知机（<strong>Multi-Layer Perceptron, MLP</strong>）。</p>
+                <div class="ann-reading-figure" data-reading-slide="neuron-model"><img src="media/intro/presentation/neuron-model.jpg" width="1776" height="569" alt="生物神经元的输入、胞体和轴突，对应计算模型的带权输入、汇总和输出" /></div>
+
+                <h3>从一个神经元到一个线性层</h3>
+                <p>生物神经元通过树突接收信号，在胞体汇总，并通过轴突传递输出。人工神经元借用这一计算类比：输入向量 x 有 D 个分量，各分量乘以权重后相加，再加偏置 b。</p>
+                <div class="ann-equation" data-tex="z=w^Tx+b=\sum_{i=1}^{D}w_ix_i+b">z = wᵀx + b</div>
+                <p>权重 w 表达各输入的影响，偏置 b 调整响应位置。输出先记为 a = φ(z)，其中 φ 是激活函数的占位符；当前先理解线性计算，稍后再解释激活为什么必要、如何计算。</p>
+                <div class="ann-reading-figure" data-reading-slide="neuron-sum"><p>输入 [2, −1]，权重 [0.5, 1]，偏置 1，得到加权和 1。</p></div>
+                <p>分类任务需要为每个类别给出一个分数。将 C 个计算单元按行堆叠，得到线性分类器 f(x) = Wx + b。矩阵 W 的每一行对应一个类别的权重，b 的每个分量对应该类别的偏置。</p>
+                <div class="ann-reading-figure" data-reading-slide="linear-layer"><p>D 个输入经过 C 行权重，产生 C 个类别分数；W 的形状为 C × D。</p></div>
+                <div class="intro-example"><strong>读公式时的检查顺序</strong><p>先确认输入最后一维是否为 <span class="inline-formula">D</span>，再检查权重的列数是否为 <span class="inline-formula">D</span>，最后确认输出维度与类别数或下一层宽度一致。形状匹配是网络计算能够进行的首要条件。</p></div>
+
+                <h3>图像怎样变成类别分数</h3>
+                <p>把一张 2 × 2 图像按行展开，得到四个像素构成的输入向量 [56, 231, 24, 2]。同一个输入分别乘猫、狗、船三行权重，再加对应偏置，产生三个分数。这里的分数可以为负，也不必相加等于 1。</p>
+                <div class="ann-reading-figure" data-reading-slide="linear-image-3"><p>猫 −96.8，狗 437.9，船 60.75；狗的分数最高，当前预测与猫的真实标签不一致。</p></div>
+                <p>一个类别的分数取决于所有像素与本类别权重的对应关系。比较分数形成类别判断；预测与真实标签的差异，则为后续学习提供信号。</p>
+                <div class="ann-reading-figure" data-reading-slide="linear-geometry"><img src="media/intro/presentation/linear-boundary.jpg" width="1113" height="809" alt="线性分数的等值线与分数增长方向" /></div>
+
+                <h3>线性边界为什么不够</h3>
+                <p>线性分类器依据 <span class="inline-formula">Wx + b</span> 比较分数，本质上用直线、平面或更高维超平面划分输入空间。它能处理许多简单边界，却无法分开交错分布的类别。异或（<strong>XOR</strong>）问题正是典型例子：四个角点的同类样本彼此分离，没有一条直线能同时完成正确划分。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/ann/41.svg?v=20261008-5" width="960" height="417" alt="异或问题的同类样本位于对角位置，单条直线无法将两类样本分开" /><figcaption>复杂分布需要先构造新的中间表示。</figcaption></figure>
+                <p>引入隐藏层（<strong>hidden layer</strong>），先将 D 维输入映射为 H 维中间表示，再计算 C 维输出。这构成两层网络。φ 暂时标记隐藏层的激活环节，下一步检验它的作用。</p>
+                <div class="ann-reading-figure" data-reading-slide="two-layer-shapes"><p>h = φ(W₁x + b₁)，f(x) = W₂h + b₂；W₁ 为 H × D，W₂ 为 C × H。</p></div>
+                <p>全连接表示上一层每个单元都与下一层每个单元相连，矩阵中的一个元素对应一条连接。深度是连续变换的层数，宽度是每层单元数；增加容量后，还要通过验证检查是否改善泛化。</p>
+                <div class="ann-reading-figure" data-reading-slide="depth-width"><p>较浅与较深的网络分别展示连接层数；每层单元数决定宽度。</p></div>
+
+                <h3>非线性激活决定表达能力</h3>
+                <p>先去掉 φ，让隐藏层只计算 h = W₁x + b₁。把 h 代入输出，可以合并两层的权重和偏置。</p>
+                <div class="ann-equation" data-tex="f(x)=W_2(W_1x+b_1)+b_2=(W_2W_1)x+(W_2b_1+b_2)">f(x) = (W₂W₁)x + (W₂b₁ + b₂)</div>
+                <p>合并后仍是一个线性分类器。层数增加并没有突破原来的表达边界，因此需要在层间加入非线性激活。</p>
+                <h4>ReLU：负值置零，正值保留</h4>
+                <p>整流线性单元（<strong>Rectified Linear Unit, ReLU</strong>）计算 max(0, z)。正区间的局部导数为 1，负区间为 0。若某个单元长期落在负区间，它可能长期无法获得有效更新，这称为 dying ReLU。</p>
+                <div class="ann-reading-figure" data-reading-slide="relu"><p>ReLU 的响应曲线在负区间为零，在正区间沿直线增长。</p></div>
+                <p>Leaky ReLU 在负区间保留很小的斜率，使负输入仍有响应和梯度。下图用同一个输入对照两种函数，示例负区间斜率取 0.1。</p>
+                <div class="ann-reading-figure" data-reading-slide="leaky-relu"><p>Leaky ReLU 在负区间保留 0.1 的斜率。</p></div>
+                <h4>Sigmoid：范围与饱和</h4>
+                <p>Sigmoid 将一个标量压到 0 与 1 之间，常用于二分类输出。两端趋于饱和时，局部导数接近零；这会影响误差向前层传播。</p>
+                <div class="ann-reading-figure" data-reading-slide="sigmoid"><p>σ(z) = 1/(1+e⁻ᶻ)，局部导数为 σ(z)(1−σ(z))。</p></div>
+                <h4>Softmax：类别分数共同决定分布</h4>
+                <p>Softmax 将一组类别分数转为总和为 1 的概率分布。一个分数改变会改变共同分母，因此其他类别的概率也随之调整。隐藏层、二分类、多分类和回归的输出形式不同，激活函数应匹配所在位置和任务。</p>
+                <div class="ann-reading-figure" data-reading-slide="softmax"><p>pᵢ = eᶻⁱ/Σⱼeᶻʲ，各类别概率总和为 1。</p></div>
+
+                <h3>通勤时间：先建立一个线性预测</h3>
+                <p>假设要根据到市中心的距离预测通勤时间。五组距离与时间是观测样本，模型用截距 θ₀ 与斜率 θ₁ 计算预测。平方损失汇总预测与观测的差异，训练寻找使这一差异更小的参数。</p>
+                <div class="ann-reading-figure" data-reading-slide="commute-linear"><img src="media/intro/presentation/commute-regression.png" width="1896" height="438" alt="距离与通勤时间的五组观测及线性回归设计矩阵" /></div>
+                <p>对 θ₀ 和 θ₁ 分别求偏导，再沿负梯度更新。下面从同一组数据计算一次更新，比较更新前后的损失；下一节会把求导过程推广到多层网络。</p>
+                <div class="ann-reading-figure" data-reading-slide="commute-update"><p>损失对截距与斜率的梯度分别为 −22.9、−495.98；使用小步长可以降低这组数据上的损失。</p></div>
+                <h3>增加变量，再考虑怎样设计特征</h3>
+                <p>距离之外，星期和交通方式也会影响通勤。它们要编码为模型可处理的输入；公交、自行车、汽车属于无序类别，可使用独热编码，避免让类别编号产生不存在的大小关系。</p>
+                <div class="ann-reading-figure" data-reading-slide="commute-features"><p>增加星期、交通方式等特征后，线性模型组合各个输入。</p></div>
+                <p>线性模型对参数线性，并不意味着对原始距离只能拟合直线。人工加入 d² 等特征，就能得到关于距离的曲线；难点变成了怎样选择合适的特征。</p>
+                <div class="ann-reading-figure" data-reading-slide="commute-designed"><p>ψ(d) = [1, d, d²]，模型学习这些人工特征的系数。</p></div>
+                <h3>让多层网络学习有用的组合</h3>
+                <p>MLP 用隐藏层学习输入的组合表示，再输出连续通勤时间。前向传播按连接顺序完成计算；损失将表示和预测联系到目标，参数更新让各层共同学习。</p>
+                <div class="ann-reading-figure" data-reading-slide="commute-mlp"><p>h = φ(W₁x + b₁)，预测时间 = W₂h + b₂。</p></div>
+              </section>
+
+              <section class="intro-topic" id="topic-training" data-topic="topic-training">
+                <div class="article-section-label"><span>神经网络训练 / 06</span><button type="button" data-present-topic="topic-training">▷ 演示本节</button></div>
+                <h2>神经网络训练：让误差成为参数更新的信号</h2>
+                <p>MLP 的结构规定了怎样计算预测，权重和偏置在开始时仍未知。训练的任务是利用带标签的数据寻找一组参数，使模型在相似的新样本上也能给出有用结果。这个过程包含目标、求导、更新和泛化四个彼此关联的环节。</p>
+                <h3>把单个样本的损失汇总为训练目标</h3>
+                <p>模型 fθ 的 θ 收集全部权重和偏置。单样本损失衡量预测与标签的差异；训练样本上的平均损失称为经验风险（<strong>empirical risk</strong>）。训练希望找到使这一目标较小的参数。</p>
+                <div class="ann-reading-figure" data-reading-slide="empirical-risk"><p>L(θ) = (1/n)Σᵢℓ(fθ(xᵢ), yᵢ)。</p></div>
+                <h3>求导之前，先确定对象和形状</h3>
+                <p>标量损失对向量求导得到梯度，向量输出对向量输入求导得到雅可比矩阵。损失对某个参数矩阵的梯度，形状应与该参数矩阵相同。统一使用列向量，可以沿每层输入和输出检查维度。</p>
+                <div class="ann-reading-figure" data-reading-slide="matrix-calculus"><p>标量梯度为 D × 1，C 维输出对 D 维输入的雅可比为 C × D。</p></div>
+                <h3>链式法则：沿依赖相乘，在分支处相加</h3>
+                <p>一个参数通常先影响加权和，再影响激活，最后影响损失。链式法则把各段局部变化率相乘；如果存在多条影响路径，还要把各路径的贡献相加。</p>
+                <div class="ann-reading-figure" data-reading-slide="chain-rule"><p>w = 1 时，z = 2w + 1 = 3，a = z²；da/dw = 2z × 2 = 12。</p></div>
+                <h3>梯度给方向，学习率决定步长</h3>
+                <div class="ann-equation" data-tex="\theta_{t+1}=\theta_t-\eta\nabla_\theta L(\theta_t)">θₜ₊₁ = θₜ − η∇θL(θₜ)</div>
+                <p>负梯度给出局部下降方向，学习率 η 控制步长。每次更新后，要在新位置重新计算梯度；过大的步长仍可能使损失增大。</p>
+                <div class="ann-reading-figure" data-reading-slide="gradient-step"><p>L(w) = (w−1)²，从 w = 3 出发，学习率 0.25 将参数更新为 2，损失从 4 降为 1。</p></div>
+
+                <h3>反向传播复用前向计算的依赖</h3>
+                <p>前向传播保存每层输入、加权和与激活输出；反向传播（<strong>backpropagation</strong>）从损失出发，沿同一张计算图回传局部导数。δ 表示损失对某层加权和 z 的导数，不是该层预测与标签的直接差值。</p>
+                <div class="ann-reading-figure" data-reading-slide="forward-layers"><p>h⁽⁰⁾ = x；每层计算 z⁽ˡ⁾ = W⁽ˡ⁾h⁽ˡ⁻¹⁾ + b⁽ˡ⁾，再计算 h⁽ˡ⁾ = φ(z⁽ˡ⁾)。</p></div>
+                <h4>第一步：从输出层取得误差信号</h4>
+                <p>以平方损失和 Sigmoid 输出为例，先求损失对预测的导数，再乘输出激活的导数。更换损失或输出激活时，这一步也会随之改变。</p>
+                <div class="ann-reading-figure" data-reading-slide="output-delta"><p>δ⁽³⁾ = (ŷ−y)ŷ(1−ŷ)，对应 L = ½(ŷ−y)²。</p></div>
+                <h4>第二步：汇总隐藏层的各条影响路径</h4>
+                <p>当前隐藏单元连接到下一层多个单元，先用下一层权重汇总它们传回的影响，再逐元素乘本层激活的局部导数。权重转置负责把依赖方向和形状转回当前层。</p>
+                <div class="ann-reading-figure" data-reading-slide="hidden-delta"><p>δ⁽ˡ⁾ = (W⁽ˡ⁺¹⁾)ᵀδ⁽ˡ⁺¹⁾ ⊙ φ′(z⁽ˡ⁾)。</p></div>
+                <h4>第三步：从误差信号得到参数梯度</h4>
+                <p>某条连接的梯度等于目标单元的误差信号乘来源单元的激活。把全部连接组合起来，就是当前层误差与上一层输出的外积；偏置梯度直接等于该层 δ。</p>
+                <div class="ann-reading-figure" data-reading-slide="parameter-gradients"><p>∂L/∂W⁽ˡ⁾ = δ⁽ˡ⁾(h⁽ˡ⁻¹⁾)ᵀ，∂L/∂b⁽ˡ⁾ = δ⁽ˡ⁾。</p></div>
+                <h3>完整算例：同一个 2 → 3 → 2 → 1 网络</h3>
+                <p>输入为 [1, 2]，标签 y = 1，三层都使用 Sigmoid，损失为 ½(ŷ−y)²。下面沿固定参数依次求前向结果、损失、各层误差与更新，不在中途更换网络。</p>
+                <h4>固定输入、连接权重与偏置</h4>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-0"><p>W₁ = [[2,1],[1,3],[3,2]]，b₁ = [1,2,3]；W₂ = [[1,1,2],[3,2,2]]，b₂ = [2,1]；W₃ = [[1,3]]，b₃ = [2]。</p></div>
+                <h4>逐层前向，得到预测与损失</h4>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-1"><p>第一层加权和为 [5, 9, 10]，经过 Sigmoid 得到三个激活输出。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-2"><p>第二层使用第一层的三个激活作为输入，计算两个新的响应。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-3"><p>输出加权和约 5.99648，预测约 0.99751869，损失约 3.07845 × 10⁻⁶。</p></div>
+                <h4>从损失回传，再更新同一组参数</h4>
+                <p>激活接近饱和时，局部导数很小。将各条路径的贡献汇总，可以观察到越靠前的层获得的梯度也很小。更新使用未舍入的梯度，显示值只作阅读近似。</p>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-4"><p>输出层先取得 δ，随后依次回传到第二层和第一层。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="backprop-example-5"><p>以学习率 0.1 同时更新全部权重与偏置，再次前向计算检查损失。</p></div>
+                <h4>自动微分完成重复的求导工作</h4>
+                <p>框架记录计算图并执行反向求导。开发者仍要明确损失定义、梯度形状与更新顺序；重复训练步骤前要清空旧梯度。</p>
+                <div class="ann-reading-figure" data-reading-slide="autodiff"><p>前向 → 损失 → 清空旧梯度 → 反向求导 → 参数更新。</p></div>
+
+                <h3>训练误差下降之后，还要检查泛化</h3>
+                <p>训练集上的损失很小，表示模型已适应这些样本；它在未见数据上的表现才反映泛化能力。欠拟合（<strong>underfitting</strong>）常表现为训练和测试都较差，可能来自模型表达不足或训练不充分。过拟合（<strong>overfitting</strong>）则常表现为训练很强、验证或测试表现变差，模型可能记住了样本中的偶然细节。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/ann/98.svg?v=20261008-5" width="960" height="417" alt="欠拟合模型无法贴合主要规律，合适模型抓住规律，过拟合模型追随训练样本的偶然波动" /><figcaption>模型容量和训练过程都需要围绕泛化效果选择。</figcaption></figure>
+                <h4>L1 与 L2：改变参数的偏好</h4>
+                <p>在数据损失上增加参数惩罚。L1 使用绝对值，倾向得到稀疏权重；L2 使用平方，倾向连续收缩。下面的约束区域展示两者为什么对参数有不同偏好，正则强度由验证集选择。</p>
+                <div class="ann-reading-figure" data-reading-slide="regularization"><p>Ltotal = L + λΣ|wⱼ| 或 L + λΣwⱼ²。</p></div>
+                <figure class="intro-visual"><img src="diagrams/intro/ann/100.svg?v=20261008-5" width="960" height="417" alt="L1 和 L2 正则化分别用菱形与圆形约束区域同损失等高线相交，显示它们对权重的不同偏好" /><figcaption>正则化通过约束参数空间改变模型偏好的解。</figcaption></figure>
+                <h4>Dropout：训练与推理的状态不同</h4>
+                <p>训练时随机屏蔽部分激活，让网络减少对单个单元的依赖。采用 inverted dropout 时，保留的激活除以保留概率；推理使用完整网络，无需再缩放。</p>
+                <div class="ann-reading-figure" data-reading-slide="dropout"><p>保留概率 0.5 时，保留激活乘以 2；不同训练批次使用不同掩码。</p></div>
+                <h4>早停与数据增强</h4>
+                <p>训练损失继续下降时，验证损失可能已经回升。早停保存并恢复验证表现最好的轮次；测试集不能决定停止时机。数据增强则增加观察变化，但必须保留原有标签含义。</p>
+                <div class="ann-reading-figure" data-reading-slide="early-stopping"><p>示例验证损失在第 5 轮最低，随后回升，应该保留第 5 轮参数。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="augmentation"><p>同一个芒果的翻转、轻微旋转仍保留芒果类别。</p></div>
+
+                <h3>从批量选择走向优化器设计</h3>
+                <p>全批量使用全部训练样本，每步成本较高；单样本更新快，但梯度估计波动较大；小批量在成本与稳定性之间取得折中。</p>
+                <div class="ann-reading-figure" data-reading-slide="batching"><p>一次更新分别使用全部、一个或一部分样本。</p></div>
+                <h4>Momentum 与 Nesterov：利用方向历史</h4>
+                <p>指数移动平均逐步降低旧梯度的影响。Momentum 用历史方向与当前梯度共同更新，在来回变化的方向上减少波动；Nesterov 进一步在动量预测的位置求梯度，提前修正方向。</p>
+                <div class="ann-reading-figure" data-reading-slide="momentum"><p>历史平均 mₜ = 0.8mₜ₋₁ + 0.2gₜ，积累持续方向并缓和反复振荡。</p></div>
+                <figure class="intro-visual"><img src="diagrams/intro/ann/110.svg?v=20261008-5" width="960" height="417" alt="普通梯度下降与动量在同一等高线上的路径对照" /><figcaption>方向历史可以改变更新路径。</figcaption></figure>
+                <div class="ann-reading-figure" data-reading-slide="nesterov"><p>Nesterov 在 θₜ − γvₜ₋₁ 的预估位置计算梯度。</p></div>
+                <h4>Adagrad：各参数使用不同有效步长</h4>
+                <p>累积每个参数的梯度平方，让历史梯度较大的方向获得较小的有效步长。但累积量只增不减，训练后期步长可能变得过小。</p>
+                <div class="ann-reading-figure" data-reading-slide="adagrad"><p>Gₜ,ᵢ = Gₜ₋₁,ᵢ + gₜ,ᵢ²，步长按 √Gₜ,ᵢ 调整。</p></div>
+                <h4>RMSprop 与 Adadelta：让旧历史逐渐退出</h4>
+                <p>用梯度平方的移动平均代替永久累积，缓解有效步长持续缩小的问题。Adadelta 还维护更新平方的平均，用历史更新尺度与梯度尺度的比值决定更新。</p>
+                <div class="ann-reading-figure" data-reading-slide="rmsprop-adadelta"><p>梯度尺度与更新尺度分别采用指数移动平均。</p></div>
+                <h4>Adam 与 AdamW：方向、尺度与衰减</h4>
+                <p>Adam 同时维护梯度的一阶矩和二阶矩，并修正零初始化造成的早期偏差。AdamW 再将权重衰减单独作用于参数，避免让衰减项经过自适应分母缩放。</p>
+                <div class="ann-reading-figure" data-reading-slide="adam-adamw"><p>Adam 使用修正后的方向平均与梯度平方平均。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="adamw-decay"><p>AdamW 将参数收缩与自适应梯度更新分开计算。</p></div>
+
+                <h3>初始化：打破对称，并稳定传播尺度</h3>
+                <p>完全相同的同层单元会获得相同响应，难以学习不同特征；随机初始化先打破这种对称性。接下来还要选择合适的尺度，让信号与梯度不随层数持续放大或缩小。</p>
+                <div class="ann-reading-figure" data-reading-slide="initialization-symmetry"><p>不同随机起点使各单元能够学习不同特征。</p></div>
+                <h4>从加权和的方差推导前向尺度</h4>
+                <p>在线性激活近似下，假设输入和权重零均值、彼此独立，各输入贡献近似不相关且同方差。加权和有 fan-in 条输入连接，因此其方差近似等于输入方差乘 fan-in，再乘权重方差。</p>
+                <div class="ann-reading-figure" data-reading-slide="initialization-assumptions"><p>Var(Wᵢxᵢ) = Var(Wᵢ)Var(xᵢ)，各项方差按输入连接数累加。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="initialization-forward"><p>Var(z) ≈ fan-in × Var(W) × Var(x)；保持前向方差需要乘积约为 1。</p></div>
+                <h4>加入反向梯度，再得到 Xavier 的折中</h4>
+                <p>反向传播从 fan-out 条输出路径汇总梯度，同样希望梯度方差保持稳定。前向与反向的条件可能不同，Xavier 用输入和输出连接数的折中确定方差。分析依赖上述近似假设。</p>
+                <div class="ann-reading-figure" data-reading-slide="initialization-backward"><p>Xavier 权重方差为 2/(fan-in + fan-out)。</p></div>
+                <p>He 初始化进一步考虑 ReLU 对约一半响应的屏蔽，常取权重方差 2/fan-in。方差与标准差要区分：正态采样的标准差是所选方差的平方根。</p>
+                <div class="ann-reading-figure" data-reading-slide="initialization"><p>Xavier 配合近似线性或对称激活，He 常与 ReLU 配合。</p></div>
+                <h3>输入尺度也会影响优化</h3>
+                <p>不同特征范围悬殊时，同一个学习率难以适应各个方向。Min-Max 缩放和标准化改变数值表示；所有统计量只在训练集确定，再复用于验证、测试和新样本。标准化不会自动消除偏态，常量特征需单独处理。</p>
+                <div class="ann-reading-figure" data-reading-slide="input-scale"><p>Min-Max 使用训练最小值与最大值；标准化减训练均值，再除训练标准差。</p></div>
+              </section>
+
+              <section class="intro-topic" id="topic-cases" data-topic="topic-cases">
+                <div class="article-section-label"><span>案例分析 / 07</span><button type="button" data-present-topic="topic-cases">▷ 演示本节</button></div>
+                <h2>案例分析：糖尿病预测与乳腺病变定位</h2>
+                <p>从历史病例预测病人是否患有糖尿病，再从乳腺超声图像定位病变。这两个任务把问题定义、获取数据、选择特征、清洗、训练、评估与部署连成完整流程。目标先确定，数据和监督才能围绕它组织。</p>
+
+                <h3>糖尿病预测：先定义样本、特征和标签</h3>
+                <p>一行历史病例是一个样本（<strong>sample</strong>），输入列是特征（<strong>feature</strong>），“是否患糖尿病”的已确认结果是标签（<strong>label</strong>）。某行输入的具体数值或类别称为特征值。标签来源必须可信，不能只凭表格里已有的一列数值，就认为已经建立了可靠的诊断依据。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-raw"><p>五条病例记录包含年龄、姓名、体重、身高、BMI、血糖、胰岛素、家族史和患病标签。</p></div>
+                <p>特征选择应回到预测目标和数据来源。ID、姓名等标识字段通常无法提供可迁移的预测信息；高度相关或由同一信息计算而来的字段也可能形成冗余。选择规则只能从训练数据中学习，否则会把验证或测试信息提前带入训练过程。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-select"><p>姓名、体重和身高退出输入集合；ID 保留用于追踪记录，不进入模型。</p></div>
+                <p>这个示例保留 BMI 表达体型，移除与其重复的体重、身高，展示一种特征筛选方案。实际选择应结合任务验证，不能把这一处理当成所有模型的固定规则。</p>
+
+                <h3>数据清洗决定模型看到什么</h3>
+                <p>原始表格常有缺失、异常、不一致编码和量纲差异。处理前要先确认它们代表录入错误、测量差异、真实但罕见的个体，还是业务流程中的缺口。缺失值可以填补、单独编码、删除记录或采用能处理缺失的模型；异常值的处理同样需要结合来源与任务，而非只凭数值大小决定。</p>
+                <p>为了比较清洗方案，这一步把第 4 条病例的血糖视为未记录，形成血糖和胰岛素两个字段缺失的情境。第 2 条病例缺 BMI。较大的血糖观测仍需核查，不能仅凭大小直接删除。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-missing"><p>第 2 条病例缺 BMI，第 4 条在清洗情境中缺血糖和胰岛素。</p></div>
+                <h4>先删除记录，再用剩余观测填补</h4>
+                <p>将这五条记录视作已划分出的教学训练子集。本示例选择删除两个测量字段缺失的第 4 条记录；剩余三个已知 BMI 为 28.1、32.0、30.2，均值 30.1，用它填补第 2 条病例。后续始终保留 ID 1、2、3、5，目标标签保持一致。实际删除与填补方案需要结合缺失原因和任务验证。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-clean"><p>先删除记录 4，再用 (28.1 + 32.0 + 30.2)/3 = 30.1 填补记录 2 的 BMI。</p></div>
+                <h4>归一化：先改变年龄的数值范围</h4>
+                <p>训练记录的年龄范围为 29–61 岁。Min-Max 将这一列映射到 [0,1]，例如 45 岁变为 0.5；其他列此时仍保持填补后的值。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-minmax"><p>年龄新值 = (年龄−29)/(61−29)。</p></div>
+                <h4>标准化：各列使用自己的均值与标准差</h4>
+                <p>继续对 BMI 和胰岛素分别标准化：减去该列训练均值，再除以该列标准差，使这组训练值均值为 0、标准差为 1。年龄继续保留归一化结果。标准化不会消除原始分布的偏态。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-standard"><p>在同一张表上标准化 BMI 与胰岛素，保留年龄缩放和全部样本标签。</p></div>
+                <h4>离散化：将血糖连续值编码成分组</h4>
+                <p>最后将血糖列按示例分箱规则映射为低值组、中值组、高值组，说明连续变量怎样变成类别。分箱表示输入的编码方式，不是目标标签，也不是诊断结论。此前其他列的处理结果继续保留。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-discrete"><p>只改变血糖列，保留之前的年龄、BMI 和胰岛素变换。</p></div>
+
+                <h3>训练、选择与评价使用不同的数据</h3>
+                <p>训练集用于学习权重等模型参数；验证集用于选择网络宽度、学习率、正则强度和停止轮次；测试集留作最终的独立评价。70/20/10 只是一个便于理解的示例比例，实际划分应考虑样本量、类别分布、时间顺序和任务风险。三个集合不能重叠，且同一实体的高度相关记录也应避免跨集合泄漏。</p>
+                <div class="ann-reading-figure" data-reading-slide="dataset-split"><p>训练、验证、测试分别学习参数、选择方案和独立评价。</p></div>
+                <h4>参数、超参数与任务输出</h4>
+                <p>权重、偏置由训练更新，属于参数；批量大小、学习率、深度等由人为设定或搜索，属于超参数。“是否患病”输出离散类别，是分类；预测连续数值则是回归。</p>
+                <div class="ann-reading-figure" data-reading-slide="task-output"><p>分类与回归描述输出类型；判别式与生成式描述学习目标。</p></div>
+                <p>判别式模型学习病例特征到患病目标的关系；生成式模型刻画数据分布，可以产生新的模拟记录。带有确诊标签时，有监督学习直接学习这一映射；没有标签时，无监督学习可以寻找相似病例的分组，但这些分组不自动等于诊断类别。</p>
+                <div class="ann-reading-figure" data-reading-slide="case-labels"><p>相同病例特征在有标签与无标签时，具有不同学习目标。</p></div>
+
+                <h3>乳腺病变定位：目标决定怎样获取标签</h3>
+                <p>现在希望从乳腺超声图像中定位病变。图像可以提供输入，但训练还需要与位置目标相匹配的标签。首先区分粗略标注与细致标注。</p>
+                <div class="ann-reading-figure" data-reading-slide="label-granularity"><p>原始超声图像输入模型，配对的区域掩码提供空间监督。</p></div>
+                <div class="ann-reading-figure" data-reading-slide="coarse-labels"><p>诊断报告或 EMR 可以提供良／恶性、疾病类型等信息，但没有直接给出病变像素位置。</p></div>
+                <p>细致标注由医生使用 LabelMe、3D Slicer、ITK-SNAP 等工具逐像素勾画器官或病灶，提供轮廓和掩码。其成本与一致性要求更高，却能直接告诉模型区域位置。</p>
+                <div class="ann-reading-figure" data-reading-slide="annotation-media"><img src="media/intro/presentation/annotation.gif" alt="标注者使用工具勾画目标区域的连续过程" /></div>
+                <p>作为补充对照，图像级标签、边界框和像素级掩码分别提供不同粒度的信息。获取标签的方法与模型希望输出的内容需要对应。</p>
+                <div class="ann-reading-figure" data-reading-slide="label-granularity-comparison"><p>图像级类别、框坐标与像素掩码提供不同的空间监督。</p></div>
+                <p>图像预处理可包括裁剪到统一视野、强度归一化和噪声处理，但每一种变换都要检查是否保留任务所需信号。标注昂贵时，有监督学习使用图像与标签直接学习；半监督学习让少量标注引导大量未标注图像；无监督学习只利用图像本身的结构。这三种设定的核心区别来自监督信号的可得性。</p>
+                <div class="ann-reading-figure" data-reading-slide="supervision"><p>有监督使用图像与标签，半监督使用少量标签和大量未标注图像，无监督只从图像自身寻找结构。</p></div>
+
+                <h3>评估、改进和部署组成工程闭环</h3>
+                <p>性能改进可以来自更适合任务的模型结构、更高质量的数据、更合理的训练设置或模型集成。Bagging 以相对独立的基模型降低预测方差；Boosting 按顺序训练模型，后续模型更关注已有模型没有处理好的部分。两者都是候选方案，能否使用仍取决于独立评价结果、成本和部署约束。</p>
+                <figure class="intro-visual"><img src="diagrams/intro/ann/160.svg?v=20261008-5" width="960" height="417" alt="Bagging 将多个相对独立训练的模型组合，Boosting 按顺序让后续模型关注前序模型不足" /><figcaption>集成通过组合多个模型改善预测的稳定性或偏差。</figcaption></figure>
+                <h4>评估与选择：先明确各自的职责</h4>
+                <p>模型评估观察预测误差和适用性；模型选择依据验证表现比较候选方案。选定后再使用独立测试评价泛化。为完成这一过程，需要分别回答两个问题。</p>
+                <h4>评估方法：怎样获得测试结果？</h4>
+                <div class="ann-reading-figure" data-reading-slide="evaluation-methods"><p>留出法划分集合，交叉验证轮换训练与验证，自助法通过有放回采样组织评价。</p></div>
+                <h4>性能度量：怎样判断结果有多好？</h4>
+                <p>通勤时间预测可以用均方误差，糖尿病分类可以用错误率或准确率。病变分割还可以考察预测区域与标注区域的重合程度。数据如何划分与误差怎样计算，是两个不同的问题。</p>
+                <div class="ann-reading-figure" data-reading-slide="performance-metrics"><p>均方误差衡量连续预测差异，错误率和准确率衡量类别判断。</p></div>
+                <p>完整流程从问题定义开始，经过数据获取、特征选择、清洗、训练、模型评估与选择，再进入上线运行。部署后，新样本必须经过与训练阶段一致的特征工程和预处理；数据分布、性能和失败模式仍应持续监测。下一讲将把这些基础放入图像任务，进一步学习卷积神经网络如何利用空间结构。</p>
+                <div class="ann-reading-figure" data-reading-slide="deployment"><p>明确任务 → 获取并划分数据 → 训练 → 验证选择与独立评价 → 保存处理规则和模型 → 上线监测。</p></div>
+              </section>
+            </div>
+
+            <div id="slides-mode" class="intro-mode-panel intro-slides-panel" role="tabpanel" hidden>
+              <div class="intro-slide-heading"><div><div class="eyebrow"><i></i><span id="slide-topic">引言与概览</span></div><h2 id="slide-title">人工神经网络基础</h2><p id="slide-caption">从任务定义到训练，再走向完整工程流程</p></div><span class="intro-slide-number"><b id="slide-page">01</b><small id="slide-total"> / 111</small></span></div>
+              <div class="intro-slide-image"><img id="slide-image" src="diagrams/intro/1.svg" width="960" height="417" alt="" /></div>
+              <p class="intro-slide-note" id="slide-note">使用方向键或下方按钮逐步浏览。</p>
+              <div class="intro-source-media" id="slide-media" hidden></div>
+              <div class="intro-slide-progress"><span id="slide-progress"></span></div>
+              <div class="intro-slide-controls"><button class="button secondary" type="button" id="previous-slide">← 上一页</button><span id="slide-counter">1 / 111</span><button class="button primary" type="button" id="next-slide">下一页 →</button></div>
+              <div class="intro-slide-footer"><button class="button secondary" type="button" id="read-current">▣ 阅读本节讲解</button><button class="button secondary" type="button" id="copy-slide-link">复制当前位置</button></div>
+            </div>
+
+            <footer class="page-footer"><span>AI 工程学 · 第一讲</span><span><a href="lectures.html">← 返回课程讲义</a></span></footer>
+          </div>
+
+          <aside class="page-toc intro-toc" aria-label="人工神经网络基础目录">
+            <p>本节目录</p>
+            <a href="#topic-mango" data-topic-link="topic-mango">01　芒果与学习</a>
+            <a href="#topic-ai" data-topic-link="topic-ai">02　AI 起源与流派</a>
+            <a href="#topic-ai-deep-learning" data-topic-link="topic-ai-deep-learning">03　AI → 深度学习</a>
+            <a href="#topic-deep-learning" data-topic-link="topic-deep-learning">04　深度学习的发展</a>
+            <a href="#topic-mlp" data-topic-link="topic-mlp">05　多层感知机</a>
+            <a href="#topic-training" data-topic-link="topic-training">06　神经网络训练</a>
+            <a href="#topic-cases" data-topic-link="topic-cases">07　案例分析</a>
+            <div></div>
+            <p>第一讲</p>
+            <a href="lectures.html#lecture-1">课程讲义目录</a>
+            <a href="index.html#lesson-1">课程概览</a>
+          </aside>
+        </main>
+      </div>
+    </div>
+    <div class="toast" role="status" aria-live="polite"></div>
+    <script src="script.js"></script>
+    <script src="intro-overview.js"></script>
+  </body>
+</html>
