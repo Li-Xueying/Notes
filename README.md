@@ -13,10 +13,10 @@
 | 页面 | 内容 |
 | --- | --- |
 | [课程概览](index.html) | 课程介绍、前五讲主题、考核方式与授课团队 |
-| [课程讲义](lectures.html) | 前五讲讲义目录与上传状态；第一至第四讲已提供完整讲义 |
+| [课程讲义](lectures.html) | 前五讲完整讲义目录，均提供阅读与演示模式 |
 | [下载课件](downloads.html) | PDF 课件的预览、下载与上传状态 |
 
-目前第一至第四讲的 PDF 课件与在线讲义均已提供；第五讲尚未上传，未上传的资源仍显示对应状态。
+目前前五讲的 PDF 课件与在线讲义均已提供。
 
 ## 本地预览
 
@@ -40,7 +40,21 @@ python3 -m http.server 8080 --directory ai-engineering-course
 
 课程概览、讲义目录和课件目录分别位于 `index.html`、`lectures.html` 与 `downloads.html`；第一讲页面位于 `intro-overview.html`，其翻页逻辑位于 `intro-overview.js`。页面样式和通用交互逻辑分别位于 `styles.css` 与 `script.js`。
 
-前四讲均提供阅读模式与演示模式：`intro-overview.html`、`cnn-image-recognition.html`、`rnn-lstm-sequence-modeling.html` 与 `transformer-models.html`。第四讲图解位于 `diagrams/transformer/`，正文、演示脚本和来源映射保存在 `AI工程学/.course-build/04-transformers/`。
+前五讲均提供阅读模式与演示模式：`intro-overview.html`、`cnn-image-recognition.html`、`rnn-lstm-sequence-modeling.html`、`transformer-models.html` 与 `self-supervised-learning.html`。第四讲图解位于 `diagrams/transformer/`，正文、演示脚本和来源映射保存在 `AI工程学/.course-build/04-transformers/`。
+
+第五讲覆盖原文档全部 112 页，提供 31 个阅读小节、83 个演示步骤与 8 组分步过程。唯一正文维护入口是 `scripts/self-supervised-course-data.mjs`；阅读段落、公式、演示备注、图证和来源统一定义于该文件。逐页索引、教学覆盖、修正依据、派生正文与验收记录保存于 `AI工程学/.course-build/05-self-supervised/`。图解和原媒体分别位于 `diagrams/self-supervised/`、`media/self-supervised/`。
+
+从工作区根目录重建第五讲：
+
+```sh
+python3 ai-engineering-course/scripts/extract-self-supervised-facts.py
+node ai-engineering-course/scripts/build-self-supervised-artifacts.mjs
+node ai-engineering-course/scripts/generate-self-supervised-diagrams.mjs
+node ai-engineering-course/scripts/build-self-supervised-page.mjs
+node ai-engineering-course/scripts/validate-self-supervised-page.mjs
+```
+
+第五讲的 MAE 掩码、可见块编码、补回位置和掩码损失共用固定块身份，其他过程包括正负视图、SimCLR 亲和矩阵、MoCo FIFO 队列与 DINO 教师更新。支持暂停、单步、重播、减少动态偏好和图解放大。手机端密集图解可局部横向滚动。PDF 为原文档导出版本，在线讲义应用经过论文与官方实现核对的事实修正。
 
 第四讲按原 PPT 的 1–183 页维护，现有 33 个阅读小节和 122 个演示步骤。原图、计算、备注与来源统一定义于 `scripts/transformer-course-data.mjs`，正文中的稳定图示 ID 将图插入首次讲解处。可以从工作区根目录完整重建：
 
@@ -88,6 +102,7 @@ node ai-engineering-course/scripts/validate-rnn-page.mjs
 - `CNNs and Image Recognition.pdf`
 - `RNNs and LSTMs.pdf`
 - `Transformer Models.pdf`
+- `Self-supervised Learning.pdf`
 
 新增或更换课件时，请同步更新首页及下载页中的文件链接与上传状态。讲义发布后，请同步更新讲义目录及相应入口。
 

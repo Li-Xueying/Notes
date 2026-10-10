@@ -1,0 +1,32 @@
+.ssl-page .button svg, .ssl-page [data-present-section] svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  vertical-align: middle;
+}
+.ssl-page [data-present-section] { display: inline-flex; align-items: center; gap: 6px; }
+.ssl-page .ssl-reading-step { margin-top: 26px; }
+.ssl-page .ssl-reading-step h3 { font-size: 20px; line-height: 1.6; margin-bottom: 12px; }
+.ssl-page .ssl-reading-step p { margin: 12px 0; line-height: 1.85; }
+.ssl-page .intro-topic { border-radius: 0; }
+.ssl-page .ssl-figure-scroll { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.ssl-page .tf-sequence-stage { aspect-ratio: 960 / 440; }
+.ssl-page .cnn-equation { overflow-x: auto; padding: 18px 16px; margin: 20px 0 8px; background: #f3f7f4; border-left: 3px solid #426f91; }
+.ssl-page .cnn-equation .katex-display { margin: 0; }
+.ssl-page .ssl-equation-explanation { color: #52665d; font-size: 14px; line-height: 1.8; }
+.ssl-page .intro-slide-image { display: block; aspect-ratio: auto; height: auto; }
+.ssl-page .intro-slide-image img { height: auto; object-fit: contain; }
+.ssl-page .tf-sequence-stage { overflow-x: auto; }
+.ssl-page #slide-sequence, .ssl-page .tf-sequence, .ssl-page .tf-sequence-stage { width: 100%; min-width: 0; max-width: 100%; }
+.ssl-page .tf-sequence-caption { min-height: 48px; }
+.ssl-page .intro-visual figcaption { color: #5d7469; font-size: 13px; line-height: 1.7; margin-top: 8px; }
+@media (max-width: 767px) {
+  .ssl-page .ssl-figure-scroll > a, .ssl-page .tf-sequence-zoom { min-width: 650px; }
+  .ssl-page .tf-sequence-stage { aspect-ratio: auto; height: 300px; }
+  .ssl-page .tf-sequence-zoom { height: 300px; }
+  .ssl-page .intro-slide-heading h2 { font-size: 22px; }
+  .ssl-page .intro-slide-controls { gap: 8px; }
+  .ssl-page .intro-slide-controls .button { padding-inline: 12px; }
+  .ssl-page .intro-slide-controls .button svg { width: 15px; height: 15px; }
+  .ssl-page .ssl-reading-step h3 { font-size: 18px; }
+}

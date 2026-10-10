@@ -173,7 +173,7 @@ const document = `<!doctype html>
       <aside class="sidebar" aria-label="课程目录">
         <div class="sidebar-heading">课程讲义 <span>LECTURES</span></div>
         <a class="overview-link" href="lectures.html">◈　课程讲义目录</a>
-        <div class="nav-part intro-sidebar-nav"><p>第二讲 <span>VISION</span></p><a href="intro-overview.html#topic-mango"><b>01</b>人工神经网络基础</a><a class="active" href="#cnn-classification"><b>02</b>CNN 与图像识别</a><a href="rnn-lstm-sequence-modeling.html#rnn-sequence-data"><b>03</b>RNN 与 LSTM</a><a href="transformer-models.html#tf-qkv"><b>04</b>Transformer 模型</a><a href="lectures.html#lecture-5"><b>05</b>自监督学习</a></div>
+        <div class="nav-part intro-sidebar-nav"><p>第二讲 <span>VISION</span></p><a href="intro-overview.html#topic-mango"><b>01</b>人工神经网络基础</a><a class="active" href="#cnn-classification"><b>02</b>CNN 与图像识别</a><a href="rnn-lstm-sequence-modeling.html#rnn-sequence-data"><b>03</b>RNN 与 LSTM</a><a href="transformer-models.html#tf-qkv"><b>04</b>Transformer 模型</a><a href="self-supervised-learning.html#ssl-visual-tasks"><b>05</b>自监督学习</a></div>
         <a class="sidebar-resource" href="index.html#assessment">课程考核</a><a class="sidebar-resource" href="index.html#faculty">授课团队</a><a class="sidebar-resource download-resource" href="downloads.html">↓　下载课件</a><div class="sidebar-footer">上海创智学院 <span>2026 秋季</span></div>
       </aside>
       <div class="site-body">

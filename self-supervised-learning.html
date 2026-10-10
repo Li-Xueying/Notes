@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="description" content="AI 工程学第五讲：代理任务、视频着色、MAE、InfoNCE、SimCLR、MoCo 与 DINO。" /><title>自监督学习 · AI 工程学</title><link rel="stylesheet" href="vendor/katex/katex.min.css" /><link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="transformer-content.css" /><link rel="stylesheet" href="self-supervised-content.css?v=20261010-2" /></head>
+<body class="intro-page tf-page ssl-page"><a class="skip-link" href="#main-content">跳转至正文</a><header class="site-header"><a class="brand" href="index.html" aria-label="AI 工程学课程首页"><span class="brand-mark" aria-hidden="true">⌬</span><span>AI 工程学<small>AI ENGINEERING</small></span></a><nav class="header-nav" aria-label="网站导航"><a href="index.html">课程概览</a><a class="current" href="lectures.html">课程讲义</a><a href="downloads.html">下载课件（PDF）</a><span class="institution">⌂　上海创智学院</span></nav><button class="mobile-menu" type="button" aria-label="打开导航" aria-expanded="false">☰</button></header>
+<div class="app-shell"><aside class="sidebar" aria-label="课程目录"><div class="sidebar-heading">课程讲义 <span>LECTURES</span></div><a class="overview-link" href="lectures.html">◈　课程讲义目录</a><div class="nav-part intro-sidebar-nav"><p>第五讲 <span>REPRESENTATION</span></p><a href="intro-overview.html#topic-mango"><b>01</b>人工神经网络基础</a><a href="cnn-image-recognition.html#cnn-classification"><b>02</b>CNN 与图像识别</a><a href="rnn-lstm-sequence-modeling.html#rnn-sequence-data"><b>03</b>RNN 与 LSTM</a><a href="transformer-models.html#tf-qkv"><b>04</b>Transformer 模型</a><a class="active" href="#ssl-visual-tasks"><b>05</b>自监督学习</a></div><a class="sidebar-resource" href="index.html#assessment">课程考核</a><a class="sidebar-resource" href="index.html#faculty">授课团队</a><a class="sidebar-resource download-resource" href="downloads.html">↓　下载课件</a><div class="sidebar-footer">上海创智学院 <span>2026 秋季</span></div></aside>
+<div class="site-body"><div class="breadcrumb"><span>AI 工程学　›　第五讲　›　自监督学习</span><span>Self-supervised Learning</span></div><main id="main-content" class="reading-layout intro-reading-layout"><div class="home-content"><header class="course-intro intro-lecture-header"><div class="eyebrow"><i></i>第五讲 · 视觉表征</div><h1>自监督学习</h1><p class="english-title">Self-supervised Learning</p><p class="intro-copy">从标注成本与表征迁移出发，学习代理任务、掩码重建、对比学习和自蒸馏，理解监督信号如何来自数据。</p><div class="intro-modebar" role="tablist" aria-label="讲义模式"><button class="button primary" type="button" role="tab" id="read-tab" aria-controls="read-mode" aria-selected="true" data-mode-button="read"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-book-open"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 7v14" />
+  <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+</svg>
+阅读模式</button><button class="button secondary" type="button" role="tab" id="slides-tab" aria-controls="slides-mode" aria-selected="false" data-mode-button="slides"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示模式</button><span class="intro-page-count">3 个章节 · 31 个主题 · 83 个演示步骤</span></div></header>
+<div id="read-mode" class="intro-mode-panel" role="tabpanel" aria-labelledby="read-tab"><section class="intro-topic tf-topic" id="ssl-visual-tasks" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 01</span><button type="button" data-present-section="ssl-visual-tasks"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>标注推动视觉学习</h2><p>图像中的对象、位置与区域，可以形成不同学习任务。先看这些任务需要怎样的输出，再追问训练信号从哪里来。</p><div class="ssl-reading-step" id="read-course-route"><h3>自监督学习：由数据产生训练信号</h3><p>自监督学习（Self-supervised Learning，SSL）利用数据自身的结构、变换或不同视图构造目标，学习可复用的表征（representation）。</p><p>本讲围绕视觉表征展开，先解释标注成本，再逐步研究具体代理任务与学习机制，最后用下游任务检验表征的用途。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/course-route.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：自监督学习：由数据产生训练信号"><img src="diagrams/self-supervised/course-route.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="自监督学习：由数据产生训练信号。动机与评估 → 传统代理任务 → 现代方法" /></a></div><figcaption>动机与评估 → 传统代理任务 → 现代方法</figcaption></figure></div><div class="ssl-reading-step" id="read-imagenet"><h3>ImageNet：规模化标注的推动作用</h3><p>ImageNet 大规模视觉识别挑战赛（ILSVRC）提供统一的图像类别与评价基准。历史图以分类错误率为纵轴，越低越好。</p><p>2012 年分类数据含 1000 类，训练集 1,281,167 张、验证集 50,000 张、测试集 100,000 张；训练图像并非每类恰好 1000 张。模型与训练进步借助大规模标注，但每个新任务都重新建立这样的数据集会带来成本。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/imagenet.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：ImageNet：规模化标注的推动作用"><img src="diagrams/self-supervised/imagenet.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="ImageNet：规模化标注的推动作用。1000 类图像分类与历史竞赛结果" /></a></div><figcaption>1000 类图像分类与历史竞赛结果</figcaption></figure></div><div class="ssl-reading-step" id="read-visual-tasks"><h3>四种视觉任务，需要四种输出</h3><p>图像分类（image classification）给整图类别；语义分割（semantic segmentation）给像素类别；目标检测（object detection）给框与类别；实例分割（instance segmentation）还区分同类的不同对象。</p><p>观察猫图的整图标签，以及多对象场景中的像素区域、边框和独立实例。输出粒度不同，监督信息也不同。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/visual-tasks.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：四种视觉任务，需要四种输出"><img src="diagrams/self-supervised/visual-tasks.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="四种视觉任务，需要四种输出。分类、语义分割、检测、实例分割" /></a></div><figcaption>分类、语义分割、检测、实例分割</figcaption></figure></div><div class="ssl-reading-step" id="read-label-bottleneck"><h3>目标标注有限，怎样学习？</h3><p>为任务收集带标注数据，选择网络与训练目标，再训练并部署，是常见监督学习路径。数据质量、覆盖范围和学习目标共同影响模型。</p><p>检测、分割或专门领域可能只有少量标注。迁移学习首先回答：能否把其他数据上已经学到的特征带过来？</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/label-bottleneck.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：目标标注有限，怎样学习？"><img src="diagrams/self-supervised/label-bottleneck.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="目标标注有限，怎样学习？。数据 → 目标与模型 → 训练 → 部署" /></a></div><figcaption>数据 → 目标与模型 → 训练 → 部署</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-transfer" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 02</span><button type="button" data-present-section="ssl-transfer"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>迁移学习与表征</h2><p>把学习分成预训练与目标任务适配，可以减少目标任务标注需求。</p><div class="ssl-reading-step" id="read-transfer"><h3>先学特征，再适配目标任务</h3><p>迁移学习（transfer learning）先在源数据学习编码器，再用小目标数据集训练新任务头。编码器把图像转为特征向量，任务头给出类别等输出。</p><p>从头训练同时学习特征和目标分类器，通常需要较多标注。迁移阶段可冻结编码器或联合微调；目标样本数 k 可远小于源样本数 n。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/transfer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：先学特征，再适配目标任务"><img src="diagrams/self-supervised/transfer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="先学特征，再适配目标任务。从头训练与迁移学习" /></a></div><figcaption>从头训练与迁移学习</figcaption></figure></div><div class="ssl-reading-step" id="read-transfer-evidence"><h3>分类改进可能惠及下游任务</h3><p>左图观察分类错误率下降，右图观察 COCO 检测指标提高。两组图展示各自趋势，模型没有一一配对关系。</p><p>编码器结构与训练的改进可能通过迁移提高下游表现。比较时分别识别越低越好、越高越好的指标，并保留不同实验设置。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/transfer-evidence.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：分类改进可能惠及下游任务"><img src="diagrams/self-supervised/transfer-evidence.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="分类改进可能惠及下游任务。分类错误率与 COCO 检测表现" /></a></div><figcaption>分类错误率与 COCO 检测表现</figcaption></figure></div><div class="ssl-reading-step" id="read-representation-cost"><h3>源任务的标注成本仍然存在</h3><p>迁移减少目标标签需求，监督预训练仍靠源任务人工标签塑造特征。下一步把问题转向编码器本身的学习方式。</p><p>能否先从大量未标注数据学特征，再用少量目标标签建立应用？这是自监督表征学习的动机。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/representation-cost.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：源任务的标注成本仍然存在"><img src="diagrams/self-supervised/representation-cost.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="源任务的标注成本仍然存在。图像 → 特征 → 人工类别标签" /></a></div><figcaption>图像 → 特征 → 人工类别标签</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-observation" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 03</span><button type="button" data-present-section="ssl-observation"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>从观察中学习</h2><p>先学习世界的结构，再学习具体任务，为减少显式标签依赖提供研究动机。</p><div class="ssl-reading-step" id="read-observation"><h3>观察、交互和多模态信息提供线索</h3><p>Hinton、LeCun 和 Bengio 对无监督学习、先学表征和适应变化的讨论，共同指向减少人工标签依赖。人类婴儿从观察、操作、视觉、声音和触觉积累经验。</p><p>这为任务设计提供启发；计算机仍需要具体输入、目标和优化方法。行为类比不能直接证明某种网络具有人类理解能力。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/observation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：观察、交互和多模态信息提供线索"><img src="diagrams/self-supervised/observation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="观察、交互和多模态信息提供线索。少量明确监督，大量自然经验" /></a></div><figcaption>少量明确监督，大量自然经验</figcaption></figure></div><div class="ssl-reading-step" id="read-ssl-benefits"><h3>自动构造目标，扩大可用数据</h3><p>监督目标来自外部人工标签，自监督目标从数据生成。自动构造目标降低标签收集成本，使更大规模未标注数据可参与训练。</p><p>合适的目标可能得到更有用、更稳健的表征，但效果依赖数据分布、目标和训练，需要用下游实验检验。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/ssl-benefits.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：自动构造目标，扩大可用数据"><img src="diagrams/self-supervised/ssl-benefits.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="自动构造目标，扩大可用数据。标注成本、可扩展性与迁移能力" /></a></div><figcaption>标注成本、可扩展性与迁移能力</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-pretext" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 04</span><button type="button" data-present-section="ssl-pretext"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>代理任务与下游任务</h2><p>训练任务可以与最终应用不同；中间编码器连接这两个阶段。</p><div class="ssl-reading-step" id="read-pretext"><h3>代理任务：从数据产生答案</h3><p>代理任务（pretext task）为学习表征而设计。隐藏图像区域后预测缺失内容，或施加已知旋转后预测角度，都能由原数据自动产生答案。</p><p>输入经编码器形成表征，再由分类器、解码器或回归器预测自动目标。虽然没有人工标注，优化仍可采用分类或回归损失；损失反向更新编码器。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/pretext.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：代理任务：从数据产生答案"><img src="diagrams/self-supervised/pretext.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="代理任务：从数据产生答案。未标注数据 → 编码器 → 代理头" /></a></div><figcaption>未标注数据 → 编码器 → 代理头</figcaption></figure></div><div class="ssl-reading-step" id="read-downstream"><h3>下游任务：复用编码器，换输出头</h3><p>下游任务（downstream task）是实际关心的应用。预训练后保留编码器，替换代理头，用目标数据训练类别、检测或分割输出。</p><p>编码器可冻结，也可继续更新。人工目标标签在适配阶段使用，最终关心下游表现而非代理任务分数。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/downstream.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：下游任务：复用编码器，换输出头"><img src="diagrams/self-supervised/downstream.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="下游任务：复用编码器，换输出头。表征 → 应用所需的类别或区域" /></a></div><figcaption>表征 → 应用所需的类别或区域</figcaption></figure></div><div class="ssl-reading-step" id="read-pretext-examples"><h3>同一图像的四种代理任务</h3><p>四个猫图示例分别利用缺失内容、已知角度、块排列和原颜色。补全与着色的目标来自原图，旋转与排列目标由操作记录。</p><p>这些任务共同把数据结构转为训练信号，但各自诱导的特征可能不同，需要统一的表征评价协议。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/pretext-examples.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：同一图像的四种代理任务"><img src="diagrams/self-supervised/pretext-examples.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="同一图像的四种代理任务。补全、旋转、拼图与着色" /></a></div><figcaption>补全、旋转、拼图与着色</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-evaluation" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 05</span><button type="button" data-present-section="ssl-evaluation"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>怎样评估表征</h2><p>固定特征好不好，与允许适配后能做多好，是不同的问题。</p><div class="ssl-reading-step" id="read-evaluation"><h3>冻结编码器，训练线性分类器</h3><p>线性探测（linear probing）冻结编码器，只用带标签数据训练线性头，检查特征的可分性。它仍使用目标训练标签。</p><p>无微调骨干还可以用最近邻或特征匹配评价。零样本迁移（zero-shot transfer）进一步要求不使用目标任务训练标签，并具备可用的输出映射；任意图像编码器不能自动输出新类别名称。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/evaluation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：冻结编码器，训练线性分类器"><img src="diagrams/self-supervised/evaluation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="冻结编码器，训练线性分类器。线性探测与无微调迁移" /></a></div><figcaption>线性探测与无微调迁移</figcaption></figure></div><div class="ssl-reading-step" id="read-rotation-transfer"><h3>从旋转角度迁移到鸟类别</h3><p>先从大量未标注图像构造旋转标签，训练特征提取器；随后连接浅层分类器，用少量带标签目标数据学习鸟类别。</p><p>两个阶段的输出从“90°”变成“鸟”，标签来源随之改变。最后在独立目标数据上测分类、检测等指标，检验预训练能否减少标签需求。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/rotation-transfer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：从旋转角度迁移到鸟类别"><img src="diagrams/self-supervised/rotation-transfer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="从旋转角度迁移到鸟类别。未标注预训练 → 少量标签适配 → 评价" /></a></div><figcaption>未标注预训练 → 少量标签适配 → 评价</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-scope" data-topic="introduction"><div class="article-section-label"><span>动机与评估 / 06</span><button type="button" data-present-section="ssl-scope"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>跨模态范围与本讲重点</h2><p>可用于自监督的数据关系不限于图像，接下来聚焦视觉中的具体任务。</p><div class="ssl-reading-step" id="read-scope"><h3>视觉、语言、语音与机器人</h3><p>语言有上下文，语音有时间依赖，机器人观察有空间与交互结构。不同模态都可以从原数据构造目标。</p><p>视觉部分先研究空间、变换与重建任务，再研究统一的视图一致性目标。跨模态示例用于建立范围认识。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/scope.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：视觉、语言、语音与机器人"><img src="diagrams/self-supervised/scope.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="视觉、语言、语音与机器人。本讲重点：视觉表征" /></a></div><figcaption>本讲重点：视觉表征</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-relative-position" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 07</span><button type="button" data-present-section="ssl-relative-position"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>预测图像块的相对位置</h2><p>物体部件有空间结构。预测两个块的关系可以推动编码器学习这种结构。</p><div class="ssl-reading-step" id="read-relative-patches"><h3>中心猫块与八个邻域位置</h3><p>上下文预测（context prediction）选中心块，再从八个周边方向采样一块，预测相对位置。猫图输入中心脸部与右上耳部，标签 Y=3。</p><p>该实验设置为 96×96 块、约 48 像素间隔及 −7 到 7 像素抖动，减少依靠边界连续性解决任务的机会。两个分支共享参数，组合块特征后进行八分类。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/relative-patches.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：中心猫块与八个邻域位置"><img src="diagrams/self-supervised/relative-patches.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="中心猫块与八个邻域位置。两个输入块，八路位置标签" /></a></div><figcaption>两个输入块，八路位置标签</figcaption></figure></div><div class="ssl-reading-step" id="read-relative-neighbors"><h3>最近邻是否反映对象内容？</h3><p>最近邻（nearest neighbors）检索比较查询块在不同特征空间中的邻居。观察部件、结构与内容相似性，随机初始化作为基线。</p><p>图中 ImageNet 监督 AlexNet 与上下文预训练提供学习后的对照。少数检索示例是定性证据，还需要目标任务实验。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/relative-neighbors.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：最近邻是否反映对象内容？"><img src="diagrams/self-supervised/relative-neighbors.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="最近邻是否反映对象内容？。随机初始化、监督 AlexNet、自监督特征" /></a></div><figcaption>随机初始化、监督 AlexNet、自监督特征</figcaption></figure></div><div class="ssl-reading-step" id="read-relative-detection"><h3>在 VOC 2007 检验检测迁移</h3><p>检测表包含各类结果与 mAP（mean average precision，平均精度均值）。相同结构和协议下，自监督预训练改善了从头训练结果，监督预训练仍是重要参考。</p><p>应同时读初始化方式、结构与检测条件，不能把所有行当作只改变预训练的一次实验。空间关系的价值接下来扩展到多个块。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/relative-detection.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：在 VOC 2007 检验检测迁移"><img src="diagrams/self-supervised/relative-detection.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="在 VOC 2007 检验检测迁移。从头训练、自监督与监督预训练" /></a></div><figcaption>从头训练、自监督与监督预训练</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-jigsaw" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 08</span><button type="button" data-present-section="ssl-jigsaw"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>用拼图学习多块结构</h2><p>从两个块的相对关系扩展到多个块的整体排列。</p><div class="ssl-reading-step" id="read-jigsaw-task"><h3>打乱图像块，预测排列</h3><p>拼图（jigsaw puzzle）任务把图像分块后打乱，让网络识别排列。虎图依次显示原图、分块和重排，目标由操作自动记录。</p><p>对象部件、纹理与空间关系可帮助解决任务，无需人工标注对象类别。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/jigsaw-task.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：打乱图像块，预测排列"><img src="diagrams/self-supervised/jigsaw-task.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="打乱图像块，预测排列。虎图：局部外观与整体结构" /></a></div><figcaption>虎图：局部外观与整体结构</figcaption></figure></div><div class="ssl-reading-step" id="read-jigsaw-permutation"><h3>汽车例子：第 64 号排列</h3><p>从 225×225 窗口建立 3×3 网格，每个 75×75 单元随机取 64×64 块，再选预定义排列。示例标签是排列编号 64。</p><p>输出概率向量第 64 个位置的目标为 1。64 是排列身份，块数始终为九；汽车与前面的虎图共享方法，但不是同一图像案例。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/jigsaw-permutation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：汽车例子：第 64 号排列"><img src="diagrams/self-supervised/jigsaw-permutation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="汽车例子：第 64 号排列。225×225 → 3×3 → 九个 64×64 块" /></a></div><figcaption>225×225 → 3×3 → 九个 64×64 块</figcaption></figure></div><div class="ssl-reading-step" id="read-jigsaw-transfer"><h3>在分类、检测与分割中检验特征</h3><p>拼图方法报告分类 67.6%、检测 53.2%、分割 37.6%，与相对位置等预训练比较。每列对应不同任务指标。</p><p>结果应与监督来源和预训练时间一起阅读，它支持多块结构可生成迁移特征。下面改用更简单的变换标签。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/jigsaw-transfer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：在分类、检测与分割中检验特征"><img src="diagrams/self-supervised/jigsaw-transfer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="在分类、检测与分割中检验特征。Pascal VOC 下游结果" /></a></div><figcaption>Pascal VOC 下游结果</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-rotation" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 09</span><button type="button" data-present-section="ssl-rotation"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>通过旋转预测学习视觉常识</h2><p>图像中许多对象有典型朝向，已知旋转能生成无需标注的分类目标。</p><div class="ssl-reading-step" id="read-rotation-intuition"><h3>自然朝向提供结构线索</h3><p>旋转预测（rotation prediction）可能要求认识对象通常的形态与朝向。代理输出要区分旋转，不能把它描述为输出对旋转不变。</p><p>旋转对称或缺少典型方向的对象可能难以判断；任务提供学习动机，不保证学到全部语义。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/rotation-intuition.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：自然朝向提供结构线索"><img src="diagrams/self-supervised/rotation-intuition.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="自然朝向提供结构线索。观察对象形态，再判断旋转" /></a></div><figcaption>观察对象形态，再判断旋转</figcaption></figure></div><div class="ssl-reading-step" id="read-rotation-four-way"><h3>四种角度，四路分类</h3><p>同一鸟图旋转为四种输入，共享网络预测施加的角度。目标由变换程序生成，四分类交叉熵更新编码器与角度头。</p><p>预训练结束后，用类别、检测或分割头替换角度头，检验留下的表征。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/rotation-four-way.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：四种角度，四路分类"><img src="diagrams/self-supervised/rotation-four-way.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="四种角度，四路分类。0°、90°、180°、270°" /></a></div><figcaption>0°、90°、180°、270°</figcaption></figure></div><div class="ssl-reading-step" id="read-rotation-cifar"><h3>CIFAR-10 的标签数量与表现</h3><p>先在完整 CIFAR-10 训练图像上旋转预训练，再冻结 conv1、conv2，用不同规模标签子集训练 conv3 与线性层。横轴为每类标签数，纵轴为测试准确率。</p><p>观察小样本区间两条曲线的差异。这是部分层适配，不能等同于严格的单线性头探测。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/rotation-cifar.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：CIFAR-10 的标签数量与表现"><img src="diagrams/self-supervised/rotation-cifar.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="CIFAR-10 的标签数量与表现。冻结 conv1/2，训练 conv3 与线性层" /></a></div><figcaption>冻结 conv1/2，训练 conv3 与线性层</figcaption></figure></div><div class="ssl-reading-step" id="read-rotation-voc"><h3>ImageNet 预训练，VOC 标签适配</h3><p>ImageNet 全训练图像用于旋转预训练，Pascal VOC 2007 标签用于适配。表中旋转方法一组结果为分类 70.87、检测 54.4、分割 39.1。</p><p>对比无预训练与监督预训练时，需要保留表中指定层和评价协议；这些数值不适用于任意结构。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/rotation-voc.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：ImageNet 预训练，VOC 标签适配"><img src="diagrams/self-supervised/rotation-voc.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="ImageNet 预训练，VOC 标签适配。分类、检测与分割的迁移" /></a></div><figcaption>分类、检测与分割的迁移</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-colorization" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 10</span><button type="button" data-present-section="ssl-colorization"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>从灰度预测图像颜色</h2><p>颜色与对象、材质及场景相关，原彩色图同时提供输入与预测目标。</p><div class="ssl-reading-step" id="read-color-task"><h3>灰度输入，颜色输出</h3><p>图像着色（image colorization）用亮度信息预测原图颜色。虎图经过表征网络得到颜色输出，任务可能需要局部纹理与更大范围结构。</p><p>灰度到颜色不是唯一映射；合理着色与识别准确率不同，最终要评价特征迁移。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/color-task.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：灰度输入，颜色输出"><img src="diagrams/self-supervised/color-task.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="灰度输入，颜色输出。图像自身提供着色目标" /></a></div><figcaption>图像自身提供着色目标</figcaption></figure></div><div class="ssl-reading-step" id="read-lab-channels"><h3>Lab：亮度与颜色分开</h3><p>Lab 色彩空间（Lab color space）分离亮度 L 与色度 a、b。H×W 图像中，L 为 H×W×1，ab 为 H×W×2。</p><p>同一鸟图先分通道，用 L 预测 ab，再合成 (L,ab)。2016 年着色和 2017 年跨通道工作都利用无需类别标注的目标。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/lab-channels.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：Lab：亮度与颜色分开"><img src="diagrams/self-supervised/lab-channels.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="Lab：亮度与颜色分开。L 一个通道，ab 两个通道" /></a></div><figcaption>L 一个通道，ab 两个通道</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-split-brain" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 11</span><button type="button" data-present-section="ssl-split-brain"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>跨通道预测与双分支表征</h2><p>单向着色扩展为两组通道互相预测，再组合两侧特征。</p><div class="ssl-reading-step" id="read-split-brain"><h3>两个子网络，互相预测通道</h3><p>双分支自编码器（Split-brain Autoencoder）把输入分为 X₁、X₂；F₁ 从 X₁ 预测 X₂，F₂ 从 X₂ 预测 X₁，中间特征可拼接。</p><p>Lab 中亮度与色度互相预测；RGB-D（彩色与深度）中颜色与深度编码互相预测。HHA 深度编码表示水平视差、距地面高度和表面法线与重力夹角。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/split-brain.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：两个子网络，互相预测通道"><img src="diagrams/self-supervised/split-brain.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="两个子网络，互相预测通道。X₁ → X₂；X₂ → X₁" /></a></div><figcaption>X₁ → X₂；X₂ → X₁</figcaption></figure></div><div class="ssl-reading-step" id="read-split-transfer"><h3>在 Places 评价拼接特征</h3><p>ImageNet 全训练集用于自监督，F₁/F₂ 特征拼接后在带标签 Places 数据上评价。横轴是网络层，纵轴是 Top-1 准确率。</p><p>曲线说明不同层的迁移特征有不同表现，监督基准与其他代理方法作为参考。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/split-transfer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：在 Places 评价拼接特征"><img src="diagrams/self-supervised/split-transfer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="在 Places 评价拼接特征。ImageNet 自监督 → Places 场景分类" /></a></div><figcaption>ImageNet 自监督 → Places 场景分类</figcaption></figure></div><div class="ssl-reading-step" id="read-color-results"><h3>观察真实着色结果</h3><p>对比人物、食物、动物与场景中的结构边界和颜色合理性。颜色预测与真实颜色可能不同，不能据清晰结果直接断言识别能力。</p><p>单幅图利用空间结构；视频进一步提供同一对象随时间保持近似颜色的线索。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/color-results.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：观察真实着色结果"><img src="diagrams/self-supervised/color-results.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="观察真实着色结果。灰度、原颜色与预测颜色" /></a></div><figcaption>灰度、原颜色与预测颜色</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-video-coherence" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 12</span><button type="button" data-present-section="ssl-video-coherence"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>视频颜色一致性</h2><p>把颜色从一帧传到另一帧，需要跨帧建立位置对应。</p><div class="ssl-reading-step" id="read-video-reference"><h3>从参考帧给后续灰度帧着色</h3><p>视频着色（video colorization）给定参考彩色帧和目标灰度帧，预测目标颜色。t=0 参考帧提供颜色，t=1、2、3 目标帧提供待匹配内容。</p><p>对象位置会变，颜色传播要沿对象对应关系移动；时间颜色一致性成为学习线索。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-reference.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：从参考帧给后续灰度帧着色"><img src="diagrams/self-supervised/video-reference.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="从参考帧给后续灰度帧着色。同一区域随时间移动" /></a></div><figcaption>同一区域随时间移动</figcaption></figure></div><div class="ssl-reading-step" id="read-video-pointer"><h3>先学习映射，再复制颜色</h3><p>共享编码器从灰度帧提取特征，比较目标与参考位置，匹配权重作为软指针读取参考颜色。颜色流向由参考帧到目标帧。</p><p>目标帧真实颜色只参与损失，前向预测不能直接读取真值；降低着色误差推动对应关系学习。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-pointer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：先学习映射，再复制颜色"><img src="diagrams/self-supervised/video-pointer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="先学习映射，再复制颜色。特征空间的软指针" /></a></div><figcaption>特征空间的软指针</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-video-computation" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 13</span><button type="button" data-present-section="ssl-video-computation"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>匹配、颜色复制与损失</h2><p>固定目标位置，沿打分、归一化、汇总和训练四步理解计算。</p><div class="ssl-reading-step" id="read-video-matching"><h3>目标位置 j 查询参考位置 i</h3><p>参考帧有 R 个位置、目标帧有 T 个位置，两侧特征均为 d 维。固定目标 j，对参考位置 i 打分并归一化。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-matching.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：目标位置 j 查询参考位置 i"><img src="diagrams/self-supervised/video-matching.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="目标位置 j 查询参考位置 i。点积，沿参考位置归一化" /></a></div><figcaption>点积，沿参考位置归一化</figcaption></figure><div class="cnn-equation" data-tex="A_{ij}=\frac{\exp(f_i^\top f_j)}{\sum_{k=1}^{R}\exp(f_k^\top f_j)},\qquad \sum_{i=1}^{R}A_{ij}=1"><pre>A_{ij}=\frac{\exp(f_i^\top f_j)}{\sum_{k=1}^{R}\exp(f_k^\top f_j)},\qquad \sum_{i=1}^{R}A_{ij}=1</pre></div><p class="ssl-equation-explanation">A 为 R×T，i、k 是参考位置，j 是目标位置。固定 j 沿 i 归一化，每列和为 1；越大权重表示更倾向读取该参考位置。</p></div><div class="ssl-reading-step" id="read-video-weighted-color"><h3>按匹配权重读取参考颜色</h3><p>每个参考位置提供颜色 cᵢ，同一组权重 Aᵢⱼ汇总成目标预测 yⱼ。若用 ab 颜色则输出二维；量化颜色也可表示为类别分布。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-weighted-color.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：按匹配权重读取参考颜色"><img src="diagrams/self-supervised/video-weighted-color.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="按匹配权重读取参考颜色。颜色预测是参考颜色的加权和" /></a></div><figcaption>颜色预测是参考颜色的加权和</figcaption></figure><div class="cnn-equation" data-tex="y_j=\sum_{i=1}^{R}A_{ij}c_i"><pre>y_j=\sum_{i=1}^{R}A_{ij}c_i</pre></div><p class="ssl-equation-explanation">固定目标 j，i 遍历参考位置。权重和为 1，输出为参考颜色的凸组合；目标真值没有参与读取。</p></div><div class="ssl-reading-step" id="read-video-color-loss"><h3>与目标帧真实颜色比较</h3><p>原彩色视频目标帧提供真值 cⱼ。颜色预测损失经加权汇总与匹配权重传回编码器，推动特征建立准确对应。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-color-loss.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：与目标帧真实颜色比较"><img src="diagrams/self-supervised/video-color-loss.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="与目标帧真实颜色比较。误差经匹配权重更新编码器" /></a></div><figcaption>误差经匹配权重更新编码器</figcaption></figure><div class="cnn-equation" data-tex="\min_\theta\ \mathbb{E}[\sum_{j=1}^{T}\mathcal{L}_{\mathrm{color}}(y_j,c_j)]"><pre>\min_\theta\ \mathbb{E}[\sum_{j=1}^{T}\mathcal{L}_{\mathrm{color}}(y_j,c_j)]</pre></div><p class="ssl-equation-explanation">θ 是共享编码器参数，遍历目标位置并对训练采样求平均；颜色分布可用交叉熵，损失须与输出表示一致。</p></div></section>
+<section class="intro-topic tf-topic" id="ssl-video-transfer" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 14</span><button type="button" data-present-section="ssl-video-transfer"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>从着色到区域跟踪</h2><p>能够传播颜色的匹配，也可能传播位置关联的其他信息。</p><div class="ssl-reading-step" id="read-video-results"><h3>参考颜色、灰度与预测颜色</h3><p>比较参考彩色帧、目标灰度帧和预测结果，观察人物移动后颜色保持及边界误差。</p><p>参考帧提供可复制的颜色，目标帧的位置对应决定它们传播到哪里。这里保留的是静态结果帧。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-results.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：参考颜色、灰度与预测颜色"><img src="diagrams/self-supervised/video-results.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="参考颜色、灰度与预测颜色。第一组：人物移动与颜色传播" /></a></div><figcaption>第一组：人物移动与颜色传播</figcaption></figure></div><div class="ssl-reading-step" id="read-video-results-second"><h3>颜色传播在另一段视频中怎样表现？</h3><p>另一组视频展示穿黄色服装的人物。比较目标灰度帧与预测颜色，观察衣服颜色、轮廓和背景是否保持。</p><p>这与上一组来自独立视频，不能把两组静态帧拼成同一运动轨迹。后续使用相同匹配传播区域标记。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-results-second.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：颜色传播在另一段视频中怎样表现？"><img src="diagrams/self-supervised/video-results-second.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="颜色传播在另一段视频中怎样表现？。第二组：黄色服装与人物轮廓" /></a></div><figcaption>第二组：黄色服装与人物轮廓</figcaption></figure></div><div class="ssl-reading-step" id="read-video-segmentation"><h3>把参考掩码传播到对象区域</h3><p>图中高亮表示区域身份。参考帧给定区域掩码后，用学到的权重传到目标帧，检验对象对应是否保持。</p><p>预训练不需要跟踪标签；下游应用仍需要初始参考标记。必须区分训练监督与应用输入。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-segmentation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：把参考掩码传播到对象区域"><img src="diagrams/self-supervised/video-segmentation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="把参考掩码传播到对象区域。同一匹配读取区域标签" /></a></div><figcaption>同一匹配读取区域标签</figcaption></figure></div><div class="ssl-reading-step" id="read-video-keypoints"><h3>传播姿态关键点</h3><p>姿态关键点（pose keypoints）标记关节位置。红色连接保留三个真实人物例子，用来检验位置关系传播。</p><p>颜色、掩码和关节点是不同信息，但都依赖图像位置对应。接下来回到单图缺失区域预测。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/video-keypoints.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：传播姿态关键点"><img src="diagrams/self-supervised/video-keypoints.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="传播姿态关键点。从区域信息到位置标记" /></a></div><figcaption>从区域信息到位置标记</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-inpainting" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 15</span><button type="button" data-present-section="ssl-inpainting"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>图像修复：重建与对抗目标</h2><p>从周围上下文推断缺失内容，分别约束像素一致性和视觉合理性。</p><div class="ssl-reading-step" id="read-inpainting"><h3>可见上下文输入，缺失区域输出</h3><p>图像修复（inpainting）随机遮挡区域，上下文编码器（Context Encoder）读取可见信息，解码器预测缺失内容，原图提供目标。</p><p>编码器通过这种推断学习可迁移特征，重建头负责训练任务。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/inpainting.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：可见上下文输入，缺失区域输出"><img src="diagrams/self-supervised/inpainting.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="可见上下文输入，缺失区域输出。Context Encoder 学习缺失区预测" /></a></div><figcaption>Context Encoder 学习缺失区预测</figcaption></figure></div><div class="ssl-reading-step" id="read-inpainting-loss"><h3>重建与对抗学习各自约束什么？</h3><p>二值掩码 M=1 表示缺失，输入为 (1−M)⊙x。生成器 F 预测，判别器 D 区分真实与重建；两者更新方向不同。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/inpainting-loss.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：重建与对抗学习各自约束什么？"><img src="diagrams/self-supervised/inpainting-loss.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="重建与对抗学习各自约束什么？。缺失区误差与真假区分" /></a></div><figcaption>缺失区误差与真假区分</figcaption></figure><div class="cnn-equation" data-tex="\mathcal{L}_{\mathrm{rec}}=\|M\odot[x-F((1-M)\odot x)]\|_2^2"><pre>\mathcal{L}_{\mathrm{rec}}=\|M\odot[x-F((1-M)\odot x)]\|_2^2</pre></div><p class="ssl-equation-explanation">x、M 与重建采用相同像素形状；⊙ 是逐元素相乘。只比较缺失区域，L2 平方衡量像素差异。</p><div class="cnn-equation" data-tex="\begin{aligned}\min_F\max_D\ &amp;\lambda_r\mathbb{E}[\mathcal{L}_{\mathrm{rec}}]\cr &amp;+\lambda_a\mathbb{E}[\log D(x)+\log(1-D(F((1-M)\odot x)))]\end{aligned}"><pre>\begin{aligned}\min_F\max_D\ &amp;\lambda_r\mathbb{E}[\mathcal{L}_{\mathrm{rec}}]\cr &amp;+\lambda_a\mathbb{E}[\log D(x)+\log(1-D(F((1-M)\odot x)))]\end{aligned}</pre></div><p class="ssl-equation-explanation">λr、λa 是非负权重。D 最大化真假区分目标，F 最小化重建及对抗目标；实际判别区域须与实现一致。</p></div><div class="ssl-reading-step" id="read-inpainting-results"><h3>同一窗户的四种结果</h3><p>固定输入与遮挡区域，观察仅重建较平滑、仅对抗可能有纹理但内容不准、联合目标协调结构与视觉合理性。</p><p>清晰度与正确恢复、识别准确率和最佳迁移并非同一评价，需要各自检验。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/inpainting-results.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：同一窗户的四种结果"><img src="diagrams/self-supervised/inpainting-results.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="同一窗户的四种结果。输入、重建、对抗、联合目标" /></a></div><figcaption>输入、重建、对抗、联合目标</figcaption></figure></div><div class="ssl-reading-step" id="read-inpainting-transfer"><h3>检验分类、检测与分割用途</h3><p>ImageNet 训练图像用于预训练，VOC 2007 用于分类、检测，VOC 2012 用于语义分割。方法对应报告 56.5%、44.5%、30.0%。</p><p>读表时保留任务、预训练方式和协议。接下来把局部遮挡扩展为大比例图像块掩码。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/inpainting-transfer.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：检验分类、检测与分割用途"><img src="diagrams/self-supervised/inpainting-transfer.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="检验分类、检测与分割用途。ImageNet → VOC 2007 / VOC 2012" /></a></div><figcaption>ImageNet → VOC 2007 / VOC 2012</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-mae" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 16</span><button type="button" data-present-section="ssl-mae"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>MAE：高掩码率与非对称重建</h2><p>图像有冗余，遮挡太少可能让预测过于简单。高比例随机掩码要求利用更大范围的结构。</p><div class="ssl-reading-step" id="read-mae-reconstruction"><h3>保留少量块，重建图像</h3><p>掩码自编码器（Masked Autoencoder，MAE）由少量可见块预测被遮挡像素。每行依次为掩码输入、重建、重建与可见内容合成、原图。</p><p>比较 50% 与 75% 两行的可见信息与预测结构。输出合理性不能量化表征质量，其关键设计是仅编码可见块、用轻解码器重建。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-reconstruction.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：保留少量块，重建图像"><img src="diagrams/self-supervised/mae-reconstruction.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="保留少量块，重建图像。50% 与 75% 掩码率的猫图" /></a></div><figcaption>50% 与 75% 掩码率的猫图</figcaption></figure></div><div class="ssl-reading-step" id="read-mae-masking"><h3>随机掩码 75% 的块</h3><p>与视觉 Transformer（Vision Transformer，ViT）相同，图像分成不重叠 P×P 块。均匀随机掩码约 75%，只保留 25%。</p><p>若 H、W 可被 P 整除，块数 N=HW/P²。结构示例有 16 块，4 块可见、12 块缺失，用来解释位置关系，不是原实验分辨率。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="mae-masking"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div><div class="ssl-reading-step" id="read-mae-encoder"><h3>大编码器只处理可见块</h3><p>可见块展平、线性投影并加入原位置编码，形成约 N/4 个 token 的序列进入编码器；编码器不接收 mask token。</p><p>较短序列减少计算，使较大编码器预训练更可行。计算节省依结构与各部分开销，不能由 token 数推断一个通用倍数。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="mae-encoder"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div><div class="ssl-reading-step" id="read-mae-decoder"><h3>补回掩码位置，交给轻解码器</h3><p>把可见表征投影到解码维度，在缺失位置插入共享可学习掩码 token（mask token），按原位置还原完整 N 块序列，再加入位置编码。</p><p>轻量 Transformer 解码器与线性输出层预测像素。大编码器、轻解码器构成非对称设计；应用阶段通常保留编码器，重建解码器服务于预训练。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="mae-decoder"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div><div class="ssl-reading-step" id="read-mae-loss"><h3>只在缺失块计算 MSE</h3><p>均方误差（mean squared error，MSE）只比较被掩码块的预测与真值，使监督聚焦必须推断的部分。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="mae-loss"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="\mathcal{L}_{\mathrm{MAE}}=\frac{1}{|\mathcal{M}|P^2C}\sum_{p\in\mathcal{M}}\|\hat{x}_p-x_p\|_2^2"><pre>\mathcal{L}_{\mathrm{MAE}}=\frac{1}{|\mathcal{M}|P^2C}\sum_{p\in\mathcal{M}}\|\hat{x}_p-x_p\|_2^2</pre></div><p class="ssl-equation-explanation">𝓜 是固定掩码集合，C 是通道数，xp 与预测均为 P²C 维；|𝓜|&gt;0。若使用逐块归一化目标，预测与目标要采用相同尺度。</p></div></section>
+<section class="intro-topic tf-topic" id="ssl-probing-finetuning" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 17</span><button type="button" data-present-section="ssl-probing-finetuning"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>线性探测与全模型微调</h2><p>重建和识别表现不同，比较时需要明确目标阶段更新哪些参数。</p><div class="ssl-reading-step" id="read-probing-finetuning"><h3>固定表征的质量与适配潜力</h3><p>线性探测只训练线性头，衡量固定特征在受限读出条件下的可分性。全模型微调（full fine-tuning）更新编码器和任务头，衡量适配后的表现。</p><p>同一方法在两种协议中的排名可能不同。全模型微调可接线性或复杂输出头，不能把冻结和更新的结果混为一个指标。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/probing-finetuning.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：固定表征的质量与适配潜力"><img src="diagrams/self-supervised/probing-finetuning.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="固定表征的质量与适配潜力。冻结编码器 / 联合更新编码器" /></a></div><figcaption>冻结编码器 / 联合更新编码器</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-mae-experiments" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 18</span><button type="button" data-present-section="ssl-mae-experiments"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>MAE 消融与比较</h2><p>控制变量，检查掩码模式、解码器与模型规模分别带来什么变化。</p><div class="ssl-reading-step" id="read-mae-mask-ablation"><h3>掩码比例与空间采样</h3><p>消融实验（ablation study）改变设计项来识别贡献。随机 75% 掩码报告 ft 84.9、lin 73.5；连续块 75% 为 82.8、63.9；网格 75% 为 84.0、66.0。</p><p>相同比例仍可能因空间模式改变难度与表征。曲线分别对应微调和线性探测；其他待控制项包括解码深度/宽度、编码器 mask token、目标、增强与训练计划。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-mask-ablation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：掩码比例与空间采样"><img src="diagrams/self-supervised/mae-mask-ablation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="掩码比例与空间采样。随机、连续块、网格；ft / lin" /></a></div><figcaption>随机、连续块、网格；ft / lin</figcaption></figure></div><div class="ssl-reading-step" id="read-mae-decoder-ablation"><h3>解码深度与宽度影响评价</h3><p>深度表 1–12 块的 ft 约为 84.4–84.9，lin 更敏感；8 块的 lin 为 73.5。宽度表 128–1024 维中，512 维的 lin 为 73.5。</p><p>更深、更宽并未持续提高指标。两个表是不同消融，不能把最佳值拼成未运行过的新配置。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-decoder-ablation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：解码深度与宽度影响评价"><img src="diagrams/self-supervised/mae-decoder-ablation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="解码深度与宽度影响评价。轻解码器足够，最佳值依协议" /></a></div><figcaption>轻解码器足够，最佳值依协议</figcaption></figure></div><div class="ssl-reading-step" id="read-mae-comparison"><h3>比较方法时同时读数据与规模</h3><p>MAE 微调结果为 ViT-B 83.6、L 85.9、H 86.9、H448 87.8。模型和分辨率均影响结果。</p><p>多数方法自监督预训练使用 ImageNet-1K；BEiT 的 tokenizer 还使用外部 DALL-E 数据。表中比较不是严格相同外部资源的实验。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-comparison.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：比较方法时同时读数据与规模"><img src="diagrams/self-supervised/mae-comparison.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="比较方法时同时读数据与规模。ViT-B / L / H 与输入分辨率" /></a></div><figcaption>ViT-B / L / H 与输入分辨率</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-mae-visualizations" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 19</span><button type="button" data-present-section="ssl-mae-visualizations"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>高掩码率重建可视化</h2><p>极少可见内容下的预测具有不确定性，观察结构与细节怎样变化。</p><div class="ssl-reading-step" id="read-mae-extreme"><h3>98% 与 95% 掩码重建</h3><p>五列依次为原图、98% 掩码输入、98% 输出、95% 掩码输入、95% 输出。夜间人物和网球场中，可见块增加后轮廓与场景有所改善。</p><p>只有 2% 或 5% 内容可见，输出存在不确定性；比较同一行，不能把不同人物的结果互相对应。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-extreme.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：98% 与 95% 掩码重建"><img src="diagrams/self-supervised/mae-extreme.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="98% 与 95% 掩码重建。第一组：夜间人物与网球运动" /></a></div><figcaption>第一组：夜间人物与网球运动</figcaption></figure></div><div class="ssl-reading-step" id="read-mae-extreme-water"><h3>高掩码率下的动作与水面</h3><p>继续按相同五列观察人物姿态、水面和帆板。极少可见块可提示较大场景结构，细节与真实图像仍可能不同。</p><p>对比 98% 与 95% 的同一对象，关注新增可见内容怎样改变预测；这是实际重建结果的定性证据。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-extreme-water.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：高掩码率下的动作与水面"><img src="diagrams/self-supervised/mae-extreme-water.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="高掩码率下的动作与水面。第二组：人物与水上运动" /></a></div><figcaption>第二组：人物与水上运动</figcaption></figure></div><div class="ssl-reading-step" id="read-mae-extreme-subjects"><h3>人物与犬：轮廓和细节的差别</h3><p>人物和犬分别构成两行，原图与两种掩码输入/输出保持对应。场景轮廓可以恢复，面部、毛发等细节仍可能模糊。</p><p>合理重建可能与唯一真实内容不同；重建图不能代替识别指标，特征仍需下游评价。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/mae-extreme-subjects.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：人物与犬：轮廓和细节的差别"><img src="diagrams/self-supervised/mae-extreme-subjects.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="人物与犬：轮廓和细节的差别。第三组：背景结构与对象外观" /></a></div><figcaption>第三组：背景结构与对象外观</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-traditional-summary" data-topic="traditional"><div class="article-section-label"><span>传统代理任务与 MAE / 20</span><button type="button" data-present-section="ssl-traditional-summary"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>传统任务的收获与局限</h2><p>空间、变换、通道和时间都能产生信号，专门设计任务也有成本。</p><div class="ssl-reading-step" id="read-traditional-summary"><h3>关注留下的特征与迁移用途</h3><p>旋转、拼图、着色和修复偏重不同结构。代理任务做得好，还需要检查分类、检测与分割表现。</p><p>为任务定制规则繁琐，特征未必通用。下一步采用统一问题：同一图像经过不同处理，能否保持一致表征？</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/traditional-summary.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：关注留下的特征与迁移用途"><img src="diagrams/self-supervised/traditional-summary.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="关注留下的特征与迁移用途。视觉常识 → 表征 → 下游评价" /></a></div><figcaption>视觉常识 → 表征 → 下游评价</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-positive-negative" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 21</span><button type="button" data-present-section="ssl-positive-negative"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>从变换一致性到正负对</h2><p>同图多种视图共享来源身份，可用这层关系定义统一目标。</p><div class="ssl-reading-step" id="read-contrastive-pairs"><h3>同图拉近，异图保持区分</h3><p>对比表征学习（contrastive representation learning）把同一原图的另一视图作为正对（positive pair），其他图像作为负对（negative pair）。</p><p>原猫图及补全、旋转、拼图、灰度视图共享身份，另一来源图像提供负对。实例身份不等于语义标签；另一张猫图也可能成为负样本。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="contrastive-pairs"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-infonce" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 22</span><button type="button" data-present-section="ssl-infonce"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>InfoNCE：从候选中找正样本</h2><p>先定义对象与评分，再把相似度转成候选概率和优化目标。</p><div class="ssl-reading-step" id="read-contrastive-score"><h3>正对得分高，负对得分低</h3><p>编码器 f 把输入映射成向量，评分函数 s 比较两向量。希望正对分数相对负对更高，原始分数还不是概率。</p><p>仅扩大向量尺度可能令评分失控，后续 SimCLR 用归一化余弦和温度控制。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/contrastive-score.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：正对得分高，负对得分低"><img src="diagrams/self-supervised/contrastive-score.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="正对得分高，负对得分低。编码器 f 与评分函数 s" /></a></div><figcaption>编码器 f 与评分函数 s</figcaption></figure></div><div class="ssl-reading-step" id="read-infonce-probability"><h3>一个正样本与 N−1 个负样本</h3><p>固定锚点 x，将正样本与 N−1 个负样本的分数指数化并归一化，得到正候选被选中的概率。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/infonce-probability.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：一个正样本与 N−1 个负样本"><img src="diagrams/self-supervised/infonce-probability.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="一个正样本与 N−1 个负样本。分子为正对，分母为所有候选" /></a></div><figcaption>分子为正对，分母为所有候选</figcaption></figure><div class="cnn-equation" data-tex="p_+=\frac{\exp(s_+)}{\exp(s_+)+\sum_{j=1}^{N-1}\exp(s_j^-)}"><pre>p_+=\frac{\exp(s_+)}{\exp(s_+)+\sum_{j=1}^{N-1}\exp(s_j^-)}</pre></div><p class="ssl-equation-explanation">s+ 为正对分数，sj− 为第 j 个负对分数；N≥2 为含正样本的候选总数，锚点不属于候选。正项也在分母中，p+ 在 0 与 1 之间。</p></div><div class="ssl-reading-step" id="read-infonce-cross-entropy"><h3>负对数概率就是交叉熵</h3><p>InfoNCE（信息噪声对比估计损失）把识别正样本写为 N 路分类，目标类别是正样本在列表中的位置，来自视图配对关系。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/infonce-cross-entropy.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：负对数概率就是交叉熵"><img src="diagrams/self-supervised/infonce-cross-entropy.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="负对数概率就是交叉熵。N 路分类：正样本的位置是标签" /></a></div><figcaption>N 路分类：正样本的位置是标签</figcaption></figure><div class="cnn-equation" data-tex="\mathcal{L}_N=-\mathbb{E}[\log p_+]"><pre>\mathcal{L}_N=-\mathbb{E}[\log p_+]</pre></div><p class="ssl-equation-explanation">期望遍历锚点及正负采样；自然对数下以 nat 计。p+ 越大损失越小，均匀候选概率 1/N 对应 log N。</p></div><div class="ssl-reading-step" id="read-infonce-mi"><h3>互信息下界需要抽样条件</h3><p>标准推导中正样本来自联合关系，负样本独立从边缘分布抽样；下界是 log N 减损失，损失本身不是互信息下界。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/infonce-mi.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：互信息下界需要抽样条件"><img src="diagrams/self-supervised/infonce-mi.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="互信息下界需要抽样条件。I ≥ log N − 𝓛N" /></a></div><figcaption>I ≥ log N − 𝓛N</figcaption></figure><div class="cnn-equation" data-tex="I(f(x);f(x^+))\geq\log N-\mathcal{L}_N"><pre>I(f(x);f(x^+))\geq\log N-\mathcal{L}_N</pre></div><p class="ssl-equation-explanation">I 是互信息。增加 N 可提高下界可表达的上限，实际训练效果依评分、采样和优化；更多候选不保证每个设置都更好。</p></div></section>
+<section class="intro-topic tf-topic" id="ssl-simclr" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 23</span><button type="button" data-present-section="ssl-simclr"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>SimCLR：增强、编码与投影</h2><p>用同一输入的两次随机增强形成正对，在投影空间进行对比。</p><div class="ssl-reading-step" id="read-simclr-framework"><h3>共享编码器，两种随机视图</h3><p>SimCLR（A Simple Framework for Contrastive Learning）采样两种增强 t、t′，共享编码器 f 输出表征 h，投影头 g 输出对比向量 z，下游通常保留 h。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-framework.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：共享编码器，两种随机视图"><img src="diagrams/self-supervised/simclr-framework.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="共享编码器，两种随机视图。x → t / t′ → f → h → g → z" /></a></div><figcaption>x → t / t′ → f → h → g → z</figcaption></figure><div class="cnn-equation" data-tex="\operatorname{sim}(u,v)=\frac{u^\top v}{\|u\|_2\|v\|_2}"><pre>\operatorname{sim}(u,v)=\frac{u^\top v}{\|u\|_2\|v\|_2}</pre></div><p class="ssl-equation-explanation">u、v 是同维非零向量，余弦在 −1 到 1 之间。实现需避免零范数；温度 τ&gt;0 控制相似度进入 Softmax 的尺度。</p></div><div class="ssl-reading-step" id="read-simclr-augmentation"><h3>增强定义要保留哪些信息</h3><p>数据增强（data augmentation）生成不同外观的同源视图。图中展示裁剪、翻转、颜色、灰度、旋转、遮挡、噪声、模糊和边缘等选项。</p><p>SimCLR 的关键组合包括随机裁剪缩放、颜色扰动与高斯模糊。过强裁剪可能丢失主体，颜色不变性也可能舍弃某些任务需要的信息。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-augmentation.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：增强定义要保留哪些信息"><img src="diagrams/self-supervised/simclr-augmentation.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="增强定义要保留哪些信息。随机裁剪、颜色扰动与模糊" /></a></div><figcaption>随机裁剪、颜色扰动与模糊</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-simclr-batch" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 24</span><button type="button" data-present-section="ssl-simclr-batch"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>SimCLR 批内配对与平均损失</h2><p>每张原图产生两个视图，每个视图轮流成为锚点。</p><div class="ssl-reading-step" id="read-simclr-batch"><h3>B 张原图，2B 个视图</h3><p>固定锚点 i，同源另一视图 j 为正样本，其余 2B−2 个视图为负样本。分母排除自身，却必须包含正样本。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-batch.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：B 张原图，2B 个视图"><img src="diagrams/self-supervised/simclr-batch.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="B 张原图，2B 个视图。排除自身，一正与 2B−2 个负样本" /></a></div><figcaption>排除自身，一正与 2B−2 个负样本</figcaption></figure><div class="cnn-equation" data-tex="\ell_{i,j}=-\log\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}{\sum_{k=1}^{2B}\mathbf{1}_{k\ne i}\exp(\operatorname{sim}(z_i,z_k)/\tau)}"><pre>\ell_{i,j}=-\log\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}{\sum_{k=1}^{2B}\mathbf{1}_{k\ne i}\exp(\operatorname{sim}(z_i,z_k)/\tau)}</pre></div><p class="ssl-equation-explanation">B≥2 是原图批量，τ&gt;0 是温度，zi 为投影向量；分母含 2B−1 个候选。这里 B 与上一节候选总数 N 不同。</p><div class="cnn-equation" data-tex="\mathcal{L}=\frac{1}{2B}\sum_{b=1}^{B}(\ell_{2b-1,2b}+\ell_{2b,2b-1})"><pre>\mathcal{L}=\frac{1}{2B}\sum_{b=1}^{B}(\ell_{2b-1,2b}+\ell_{2b,2b-1})</pre></div><p class="ssl-equation-explanation">用一基索引，(1,2)、(3,4)…共享原图。两个方向分别作锚点，对 2B 个损失项平均。</p></div><div class="ssl-reading-step" id="read-simclr-affinity"><h3>亲和矩阵：每行标签的位置</h3><p>将投影向量组成 Z∈ℝ^(2B×d)，两两相似度得到 2B×2B 亲和矩阵（affinity matrix）。行表示锚点，对角线为自身比较。</p><p>结构示例 B=3，正列依次为 2、1、4、3、6、5。每行排除自身，把另一个同源视图作为分类目标，其他非自身列为负样本。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="simclr-affinity"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-simclr-experiments" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 25</span><button type="button" data-present-section="ssl-simclr-experiments"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>SimCLR 实验与设计取舍</h2><p>区分评价协议，再用消融解释投影头与大批量。</p><div class="ssl-reading-step" id="read-simclr-linear"><h3>冻结编码器评价线性分类</h3><p>ImageNet 全训练集用于自监督，冻结特征后训练线性分类器。横轴是参数量，纵轴是 Top-1 准确率，灰色标记为监督基准。</p><p>1×、2×、4× 代表不同网络宽度，方法与规模都可能贡献表现。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-linear.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：冻结编码器评价线性分类"><img src="diagrams/self-supervised/simclr-linear.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="冻结编码器评价线性分类。ImageNet 特征与带标签线性探测" /></a></div><figcaption>ImageNet 特征与带标签线性探测</figcaption></figure></div><div class="ssl-reading-step" id="read-simclr-few-labels"><h3>1% / 10% 标签用于微调</h3><p>半监督适配（semi-supervised adaptation）先利用全部训练图像预训练，再用 1% 或 10% 类别标签微调。表中指标为 Top-5。</p><p>SimCLR ResNet-50 行对应 75.5 与 87.8，其他宽度另列。这与只训练线性头的协议不同。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-few-labels.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：1% / 10% 标签用于微调"><img src="diagrams/self-supervised/simclr-few-labels.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="1% / 10% 标签用于微调。允许编码器更新的少标签适配" /></a></div><figcaption>允许编码器更新的少标签适配</figcaption></figure></div><div class="ssl-reading-step" id="read-simclr-projection"><h3>h 与 z 承担不同职责</h3><p>对比要求 z 对增强保持一致，可能丢弃颜色等信息。投影头将 h 与 z 分开，使 h 保留更多下游有用信息。</p><p>该实验中线性和非线性头优于无投影头，非线性较强；这是特定消融的支持，需要与其他任务条件区分。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-projection.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：h 与 z 承担不同职责"><img src="diagrams/self-supervised/simclr-projection.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="h 与 z 承担不同职责。表征空间与对比投影空间" /></a></div><figcaption>表征空间与对比投影空间</figcaption></figure></div><div class="ssl-reading-step" id="read-simclr-large-batch"><h3>更多负样本与更大内存占用</h3><p>当前批次提供负样本，扩大 B 增加候选。曲线比较 batch 256–8192 与不同训练轮次；大批量也需要保存更多反传激活。</p><p>原实验的分布式 TPU 是设备选择。把负样本数与当前批量分离，可以在较小批次下使用较大的字典，接下来学习 MoCo。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/simclr-large-batch.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：更多负样本与更大内存占用"><img src="diagrams/self-supervised/simclr-large-batch.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="更多负样本与更大内存占用。批量和训练轮次共同影响表现" /></a></div><figcaption>批量和训练轮次共同影响表现</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-moco" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 26</span><button type="button" data-present-section="ssl-moco"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>MoCo：队列与动量编码器</h2><p>保存历史键扩大负样本字典，同时保持历史特征相对一致。</p><div class="ssl-reading-step" id="read-moco-queue"><h3>查询反传，历史键保留在队列</h3><p>动量对比学习（Momentum Contrast，MoCo）用查询编码器生成 q，键编码器生成同图另一增强的正键 k⁺，历史队列键作为负样本。</p><p>梯度仅经过查询分支，正键与历史键停止梯度。队列中的特征无需保留生成它们时的反传激活。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/moco-queue.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：查询反传，历史键保留在队列"><img src="diagrams/self-supervised/moco-queue.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="查询反传，历史键保留在队列。查询 fᵩ 与动量键 fₖ" /></a></div><figcaption>查询 fᵩ 与动量键 fₖ</figcaption></figure></div><div class="ssl-reading-step" id="read-moco-momentum"><h3>键编码器缓慢追随查询编码器</h3><p>查询参数 θq 由优化器更新，键参数 θk 通过指数移动平均（exponential moving average，EMA）变化，减少新旧键特征空间的不一致。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/moco-momentum.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：键编码器缓慢追随查询编码器"><img src="diagrams/self-supervised/moco-momentum.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="键编码器缓慢追随查询编码器。EMA 保持历史字典一致性" /></a></div><figcaption>EMA 保持历史字典一致性</figcaption></figure><div class="cnn-equation" data-tex="\theta_k\leftarrow m\theta_k+(1-m)\theta_q"><pre>\theta_k\leftarrow m\theta_k+(1-m)\theta_q</pre></div><p class="ssl-equation-explanation">两侧对应参数形状一致，0≤m&lt;1；m 越接近 1，键编码器保留越多历史状态，更新越慢。</p></div><div class="ssl-reading-step" id="read-moco-fifo"><h3>先计算损失，再维护 FIFO 队列</h3><p>先进先出（first in, first out，FIFO）队列保存固定数量历史键。当前查询先用旧队列算损失，新批次键随后入队，删除最旧键。</p><p>结构示例容量 4，旧键 K1–K4。当前 K5、K6 入队后留下 K3–K6，供下一轮使用；实际队列可以更大。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="moco-fifo"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-moco-v2" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 27</span><button type="button" data-present-section="ssl-moco-v2"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>MoCo v2：融合设计与实验条件</h2><p>增强与投影头可用于动量框架，性能与资源需要分别比较。</p><div class="ssl-reading-step" id="read-moco-v2-design"><h3>非线性投影头与强增强</h3><p>MoCo v2 把非线性投影头、强增强和改进训练计划结合到动量队列。表中在 ResNet-50、200 轮条件下逐项加入设计。</p><p>投影头、增强与余弦计划贡献不同；读消融行才能判断改进来源。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/moco-v2-design.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：非线性投影头与强增强"><img src="diagrams/self-supervised/moco-v2-design.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="非线性投影头与强增强。SimCLR 设计 + MoCo 队列" /></a></div><figcaption>SimCLR 设计 + MoCo 队列</figcaption></figure></div><div class="ssl-reading-step" id="read-moco-v2-performance"><h3>小批量也能使用大负样本字典</h3><p>在 ResNet-50、200 轮设置中，MoCo v2 batch256 的线性准确率 67.5，SimCLR batch8192 为 66.6。队列解除了批量与负样本数量的绑定。</p><p>表中 800 轮与 1000 轮属于不同训练预算。小批量不能单独保证任意任务都更好。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/moco-v2-performance.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：小批量也能使用大负样本字典"><img src="diagrams/self-supervised/moco-v2-performance.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="小批量也能使用大负样本字典。batch 256 与 8192 的比较" /></a></div><figcaption>batch 256 与 8192 的比较</figcaption></figure></div><div class="ssl-reading-step" id="read-moco-memory"><h3>显存与训练时间是不同指标</h3><p>在 8 张 V100、200 轮估计中，MoCo batch256 为每 GPU 5.0G / 53h，end-to-end batch256 为 7.4G / 65h，batch4096 为 93.0G 且未给时间。</p><p>end-to-end 指相应 SimCLR 路径。保留硬件与批量才能解释资源差异；下一步考虑没有显式负样本的目标。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/moco-memory.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：显存与训练时间是不同指标"><img src="diagrams/self-supervised/moco-memory.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="显存与训练时间是不同指标。给定硬件与轮次下的资源表" /></a></div><figcaption>给定硬件与轮次下的资源表</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-dino" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 28</span><button type="button" data-present-section="ssl-dino"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>DINO：无标签多视图蒸馏</h2><p>缓慢更新的教师提供目标，学生匹配同图其他视图的输出分布。</p><div class="ssl-reading-step" id="read-dino-evidence"><h3>自监督 ViT 的空间关注</h3><p>DINO（Self-Distillation with No Labels，无标签自蒸馏）训练同图视图一致性。图中输入与关注区域展示与对象边界相关的结构。</p><p>它是定性空间证据，不等同于监督分割准确率。下面解释目标如何产生。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dino-evidence.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：自监督 ViT 的空间关注"><img src="diagrams/self-supervised/dino-evidence.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="自监督 ViT 的空间关注。实际对象与注意力区域配对" /></a></div><figcaption>实际对象与注意力区域配对</figcaption></figure></div><div class="ssl-reading-step" id="read-dino-views"><h3>两个全局与多个局部视图</h3><p>多裁剪（multi-crop）从同图生成两全局与多个局部视图。原 DINO 默认面积比例为全局 0.4–1.0、局部 0.05–0.4，缩放尺寸分别 224×224 与 96×96。</p><p>教师读两个全局，学生读两个全局与常用八个局部，共十个视图。教师停止梯度，学生从较小局部学习全局信息；裁剪面积比例与输出分辨率不同。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dino-views.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：两个全局与多个局部视图"><img src="diagrams/self-supervised/dino-views.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="两个全局与多个局部视图。教师仅全局，学生全局与局部" /></a></div><figcaption>教师仅全局，学生全局与局部</figcaption></figure></div><div class="ssl-reading-step" id="read-dino-objective"><h3>跨视图匹配教师原型分布</h3><p>投影头输出 K 维原型分数，再转成分布。原型没有人工类别名称；两全局加八局部时，两教师各匹配九个学生视图，共 18 项。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dino-objective.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：跨视图匹配教师原型分布"><img src="diagrams/self-supervised/dino-objective.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="跨视图匹配教师原型分布。排除同一视图，等权平均有效配对" /></a></div><figcaption>排除同一视图，等权平均有效配对</figcaption></figure><div class="cnn-equation" data-tex="\mathcal{L}_{\mathrm{DINO}}=\frac{1}{|\mathcal{P}|}\sum_{(u,v)\in\mathcal{P}}-\sum_{k=1}^{K}p_t^{(k)}(u)\log p_s^{(k)}(v)"><pre>\mathcal{L}_{\mathrm{DINO}}=\frac{1}{|\mathcal{P}|}\sum_{(u,v)\in\mathcal{P}}-\sum_{k=1}^{K}p_t^{(k)}(u)\log p_s^{(k)}(v)</pre></div><p class="ssl-equation-explanation">𝓟 是教师全局 u 与同图其他学生 v 的配对，排除同一视图。pt、ps 为 K 维概率向量、各自和为 1；pt 停止梯度，只更新学生。原方法对有效项等权平均。</p></div></section>
+<section class="intro-topic tf-topic" id="ssl-dino-collapse" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 29</span><button type="button" data-present-section="ssl-dino-collapse"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>中心化、锐化与教师更新</h2><p>没有显式负样本时，多个机制共同避免无信息的恒定输出。</p><div class="ssl-reading-step" id="read-dino-centering"><h3>中心化抑制单一原型主导</h3><p>中心化（centering）维护教师原型分数的逐维 EMA。减去中心 c 降低某一原型长期占主导的倾向，c 是向量而非单一标量。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dino-centering.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：中心化抑制单一原型主导"><img src="diagrams/self-supervised/dino-centering.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="中心化抑制单一原型主导。教师 logits 减去逐维移动中心" /></a></div><figcaption>教师 logits 减去逐维移动中心</figcaption></figure><div class="cnn-equation" data-tex="p_t=\operatorname{softmax}((z_t-c)/\tau_t)"><pre>p_t=\operatorname{softmax}((z_t-c)/\tau_t)</pre></div><p class="ssl-equation-explanation">zt、c 为 K 维原型 logits；τt&gt;0 是教师温度，输出各维概率和为 1。</p><div class="cnn-equation" data-tex="c\leftarrow m_c c+(1-m_c)\frac{1}{B_t}\sum_{b=1}^{B_t}z_{t,b}"><pre>c\leftarrow m_c c+(1-m_c)\frac{1}{B_t}\sum_{b=1}^{B_t}z_{t,b}</pre></div><p class="ssl-equation-explanation">Bt 是教师视图样本数量，0≤mc&lt;1。批均值来自原型 logits，中心更新不参与梯度。</p></div><div class="ssl-reading-step" id="read-dino-sharpening"><h3>低温度令教师分布更有区分度</h3><p>锐化（sharpening）用低教师温度放大分数差异，降低均匀输出的倾向；学生温度更高。中心化与锐化作用需要平衡。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dino-sharpening.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：低温度令教师分布更有区分度"><img src="diagrams/self-supervised/dino-sharpening.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="低温度令教师分布更有区分度。教师 τt 低于学生 τs" /></a></div><figcaption>教师 τt 低于学生 τs</figcaption></figure><div class="cnn-equation" data-tex="p_s=\operatorname{softmax}(z_s/\tau_s),\qquad 0&lt;\tau_t&lt;\tau_s"><pre>p_s=\operatorname{softmax}(z_s/\tau_s),\qquad 0&lt;\tau_t&lt;\tau_s</pre></div><p class="ssl-equation-explanation">zs 为学生 logits。温度控制相对分数尺度，低于 1 本身没有脱离 logits 尺度的绝对意义。</p></div><div class="ssl-reading-step" id="read-dino-ema"><h3>学生反传，教师通过 EMA 更新</h3><p>表征坍缩（representation collapse）是不同输入产生相同无信息输出，例如总用同一原型或均匀分布。停止教师梯度、中心化、锐化与 EMA 等共同稳定训练。</p><p>局部视图是同图匹配输入，不是负例；没有显式负样本也不表示任意设置都保证不坍缩。</p><figure class="intro-visual"><div class="tf-sequence" data-sequence="dino-ema"><div class="tf-sequence-stage"></div><div class="tf-animation-controls" role="group" aria-label="计算步骤"><button type="button" class="tf-animation-button" data-sequence-action="previous" aria-label="上一步" data-tooltip="上一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-back"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="18" x2="18" y1="20" y2="4" />
+  <polygon points="14,20 4,12 14,4" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="play" aria-label="播放" data-tooltip="播放"><span data-play-icon><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-play"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polygon points="6 3 20 12 6 21 6 3" />
+</svg>
+</span><span data-pause-icon hidden><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-pause"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="14" y="4" width="4" height="16" rx="1" />
+  <rect x="6" y="4" width="4" height="16" rx="1" />
+</svg>
+</span></button><button type="button" class="tf-animation-button" data-sequence-action="next" aria-label="下一步" data-tooltip="下一步"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-step-forward"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <line x1="6" x2="6" y1="4" y2="20" />
+  <polygon points="10,4 20,12 10,20" />
+</svg>
+</button><button type="button" class="tf-animation-button" data-sequence-action="replay" aria-label="从头重播" data-tooltip="从头重播"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-rotate-ccw"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+  <path d="M3 3v5h5" />
+</svg>
+</button><output class="tf-sequence-counter"></output></div><p class="tf-sequence-caption" aria-live="polite"></p></div></figure><div class="cnn-equation" data-tex="\theta_t\leftarrow\lambda\theta_t+(1-\lambda)\theta_s"><pre>\theta_t\leftarrow\lambda\theta_t+(1-\lambda)\theta_s</pre></div><p class="ssl-equation-explanation">θt、θs 为对应教师与学生参数，0≤λ&lt;1。学生由梯度更新，再通过 EMA 更新教师，为下一轮生成较稳定目标。</p></div></section>
+<section class="intro-topic tf-topic" id="ssl-dinov2" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 30</span><button type="button" data-present-section="ssl-dinov2"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>DINOv2：规模化通用视觉特征</h2><p>数据质量、模型规模与图像/块级目标共同影响冻结特征的通用性。</p><div class="ssl-reading-step" id="read-dinov2"><h3>精选数据、大骨干与多层次目标</h3><p>DINOv2 使用精选去重的 LVD-142M 图像，约为 ImageNet-22k 1400 万图像的十倍，训练 ViT-g 大骨干并蒸馏小模型。</p><p>预训练结合 DINO 图像级交叉熵、iBOT 掩码块级交叉熵和 KoLeo 特征分布正则。下游分层解码头属于任务应用；块级目标不是像素 MSE。</p><p>主成分分析（principal component analysis，PCA）图把 patch 特征映射到颜色，展示相关对象部位的对应。颜色表示特征分量，不是人工类别标记；定性观察仍需任务指标补充。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/dinov2.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：精选数据、大骨干与多层次目标"><img src="diagrams/self-supervised/dinov2.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="精选数据、大骨干与多层次目标。图像蒸馏 + 掩码块预测 + 特征正则" /></a></div><figcaption>图像蒸馏 + 掩码块预测 + 特征正则</figcaption></figure></div></section>
+<section class="intro-topic tf-topic" id="ssl-summary" data-topic="modern"><div class="article-section-label"><span>现代自监督学习 / 31</span><button type="button" data-present-section="ssl-summary"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-presentation"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M2 3h20" />
+  <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+  <path d="m7 21 5-5 5 5" />
+</svg>
+演示本节</button></div><h2>回顾：信号、表征与评价</h2><p>用同一学习链路理解不同方法生成的监督与留下的能力。</p><div class="ssl-reading-step" id="read-course-summary"><h3>三个问题串起自监督学习</h3><p>传统任务用空间、变换、通道和时间；MAE 预测像素；SimCLR/MoCo 比较正负视图；DINO 匹配教师分布。它们都留下编码器与表征。</p><p>判断用途时，明确输入输出、数据来源、目标标签、冻结或更新范围以及下游指标，避免把代理分数直接当成应用能力。</p><figure class="intro-visual"><div class="ssl-figure-scroll"><a class="tf-figure-link" href="diagrams/self-supervised/course-summary.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大：三个问题串起自监督学习"><img src="diagrams/self-supervised/course-summary.svg?v=20261010-2" width="960" height="440" loading="lazy" alt="三个问题串起自监督学习。监督从哪里来？留下什么？怎样评价？" /></a></div><figcaption>监督从哪里来？留下什么？怎样评价？</figcaption></figure></div></section></div>
+<div id="slides-mode" class="intro-mode-panel intro-slides-panel" role="tabpanel" aria-labelledby="slides-tab" hidden><header class="intro-slide-heading"><div><div class="eyebrow"><i></i><span id="slide-topic">动机与评估</span></div><h2 id="slide-title">自监督学习：由数据产生训练信号</h2><p id="slide-caption">动机与评估 → 传统代理任务 → 现代方法</p></div><div class="intro-slide-number"><b id="slide-page">01</b><span id="slide-total"> / 83</span></div></header><div class="intro-slide-image"><div class="ssl-figure-scroll" id="slide-static"><a class="tf-figure-link" id="slide-link" href="diagrams/self-supervised/course-route.svg?v=20261010-2" target="_blank" rel="noopener" aria-label="放大当前图解"><img id="slide-image" src="diagrams/self-supervised/course-route.svg?v=20261010-2" width="960" height="440" alt="自监督学习：由数据产生训练信号" /></a></div><div id="slide-sequence" hidden></div></div><p class="intro-slide-note" id="slide-note">自监督学习（Self-supervised Learning，SSL）利用数据自身的结构、变换或不同视图构造目标，学习可复用的表征（representation）。</p><div id="slide-equations"></div><div class="intro-slide-progress" aria-hidden="true"><span id="slide-progress"></span></div><div class="intro-slide-controls"><button class="button secondary" id="previous-slide" type="button"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-arrow-left"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="m12 19-7-7 7-7" />
+  <path d="M19 12H5" />
+</svg>
+上一页</button><span id="slide-counter">1 / 83</span><button class="button primary" id="next-slide" type="button">下一页<!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-arrow-right"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M5 12h14" />
+  <path d="m12 5 7 7-7 7" />
+</svg>
+</button></div><div class="intro-slide-footer"><button class="button secondary" id="read-current" type="button"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-book-open"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 7v14" />
+  <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+</svg>
+阅读本节</button><button class="button secondary" id="copy-slide-link" type="button"><!-- @license lucide-static v0.468.0 - ISC -->
+<svg aria-hidden="true" focusable="false"
+  class="lucide lucide-link"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+</svg>
+<span>复制当前位置</span></button></div></div>
+<footer class="page-footer"><span>AI 工程学 · 第五讲</span><span><a href="pdf/Self-supervised%20Learning.pdf" download>↓ 下载课件 PDF</a></span></footer></div><aside class="page-toc intro-toc"><p>本讲内容</p><a href="#ssl-visual-tasks" data-topic-link="introduction">动机与评估</a><a href="#ssl-relative-position" data-topic-link="traditional">传统代理任务与 MAE</a><a href="#ssl-positive-negative" data-topic-link="modern">现代自监督学习</a><div class="tf-section-toc"><a href="#ssl-visual-tasks" data-section-link="ssl-visual-tasks">01 标注推动视觉学习</a><a href="#ssl-transfer" data-section-link="ssl-transfer">02 迁移学习与表征</a><a href="#ssl-observation" data-section-link="ssl-observation">03 从观察中学习</a><a href="#ssl-pretext" data-section-link="ssl-pretext">04 代理任务与下游任务</a><a href="#ssl-evaluation" data-section-link="ssl-evaluation">05 怎样评估表征</a><a href="#ssl-scope" data-section-link="ssl-scope">06 跨模态范围与本讲重点</a><a href="#ssl-relative-position" data-section-link="ssl-relative-position">07 预测图像块的相对位置</a><a href="#ssl-jigsaw" data-section-link="ssl-jigsaw">08 用拼图学习多块结构</a><a href="#ssl-rotation" data-section-link="ssl-rotation">09 通过旋转预测学习视觉常识</a><a href="#ssl-colorization" data-section-link="ssl-colorization">10 从灰度预测图像颜色</a><a href="#ssl-split-brain" data-section-link="ssl-split-brain">11 跨通道预测与双分支表征</a><a href="#ssl-video-coherence" data-section-link="ssl-video-coherence">12 视频颜色一致性</a><a href="#ssl-video-computation" data-section-link="ssl-video-computation">13 匹配、颜色复制与损失</a><a href="#ssl-video-transfer" data-section-link="ssl-video-transfer">14 从着色到区域跟踪</a><a href="#ssl-inpainting" data-section-link="ssl-inpainting">15 图像修复：重建与对抗目标</a><a href="#ssl-mae" data-section-link="ssl-mae">16 MAE：高掩码率与非对称重建</a><a href="#ssl-probing-finetuning" data-section-link="ssl-probing-finetuning">17 线性探测与全模型微调</a><a href="#ssl-mae-experiments" data-section-link="ssl-mae-experiments">18 MAE 消融与比较</a><a href="#ssl-mae-visualizations" data-section-link="ssl-mae-visualizations">19 高掩码率重建可视化</a><a href="#ssl-traditional-summary" data-section-link="ssl-traditional-summary">20 传统任务的收获与局限</a><a href="#ssl-positive-negative" data-section-link="ssl-positive-negative">21 从变换一致性到正负对</a><a href="#ssl-infonce" data-section-link="ssl-infonce">22 InfoNCE：从候选中找正样本</a><a href="#ssl-simclr" data-section-link="ssl-simclr">23 SimCLR：增强、编码与投影</a><a href="#ssl-simclr-batch" data-section-link="ssl-simclr-batch">24 SimCLR 批内配对与平均损失</a><a href="#ssl-simclr-experiments" data-section-link="ssl-simclr-experiments">25 SimCLR 实验与设计取舍</a><a href="#ssl-moco" data-section-link="ssl-moco">26 MoCo：队列与动量编码器</a><a href="#ssl-moco-v2" data-section-link="ssl-moco-v2">27 MoCo v2：融合设计与实验条件</a><a href="#ssl-dino" data-section-link="ssl-dino">28 DINO：无标签多视图蒸馏</a><a href="#ssl-dino-collapse" data-section-link="ssl-dino-collapse">29 中心化、锐化与教师更新</a><a href="#ssl-dinov2" data-section-link="ssl-dinov2">30 DINOv2：规模化通用视觉特征</a><a href="#ssl-summary" data-section-link="ssl-summary">31 回顾：信号、表征与评价</a></div></aside></main></div></div><div class="toast" role="status" aria-live="polite"></div><script type="application/json" id="ssl-course-data">{"assetVersion":"20261010-2","sections":[{"id":"ssl-visual-tasks","title":"标注推动视觉学习","topic":"introduction","intro":"图像中的对象、位置与区域，可以形成不同学习任务。先看这些任务需要怎样的输出，再追问训练信号从哪里来。","index":1},{"id":"ssl-transfer","title":"迁移学习与表征","topic":"introduction","intro":"把学习分成预训练与目标任务适配，可以减少目标任务标注需求。","index":2},{"id":"ssl-observation","title":"从观察中学习","topic":"introduction","intro":"先学习世界的结构，再学习具体任务，为减少显式标签依赖提供研究动机。","index":3},{"id":"ssl-pretext","title":"代理任务与下游任务","topic":"introduction","intro":"训练任务可以与最终应用不同；中间编码器连接这两个阶段。","index":4},{"id":"ssl-evaluation","title":"怎样评估表征","topic":"introduction","intro":"固定特征好不好，与允许适配后能做多好，是不同的问题。","index":5},{"id":"ssl-scope","title":"跨模态范围与本讲重点","topic":"introduction","intro":"可用于自监督的数据关系不限于图像，接下来聚焦视觉中的具体任务。","index":6},{"id":"ssl-relative-position","title":"预测图像块的相对位置","topic":"traditional","intro":"物体部件有空间结构。预测两个块的关系可以推动编码器学习这种结构。","index":7},{"id":"ssl-jigsaw","title":"用拼图学习多块结构","topic":"traditional","intro":"从两个块的相对关系扩展到多个块的整体排列。","index":8},{"id":"ssl-rotation","title":"通过旋转预测学习视觉常识","topic":"traditional","intro":"图像中许多对象有典型朝向，已知旋转能生成无需标注的分类目标。","index":9},{"id":"ssl-colorization","title":"从灰度预测图像颜色","topic":"traditional","intro":"颜色与对象、材质及场景相关，原彩色图同时提供输入与预测目标。","index":10},{"id":"ssl-split-brain","title":"跨通道预测与双分支表征","topic":"traditional","intro":"单向着色扩展为两组通道互相预测，再组合两侧特征。","index":11},{"id":"ssl-video-coherence","title":"视频颜色一致性","topic":"traditional","intro":"把颜色从一帧传到另一帧，需要跨帧建立位置对应。","index":12},{"id":"ssl-video-computation","title":"匹配、颜色复制与损失","topic":"traditional","intro":"固定目标位置，沿打分、归一化、汇总和训练四步理解计算。","index":13},{"id":"ssl-video-transfer","title":"从着色到区域跟踪","topic":"traditional","intro":"能够传播颜色的匹配，也可能传播位置关联的其他信息。","index":14},{"id":"ssl-inpainting","title":"图像修复：重建与对抗目标","topic":"traditional","intro":"从周围上下文推断缺失内容，分别约束像素一致性和视觉合理性。","index":15},{"id":"ssl-mae","title":"MAE：高掩码率与非对称重建","topic":"traditional","intro":"图像有冗余，遮挡太少可能让预测过于简单。高比例随机掩码要求利用更大范围的结构。","index":16},{"id":"ssl-probing-finetuning","title":"线性探测与全模型微调","topic":"traditional","intro":"重建和识别表现不同，比较时需要明确目标阶段更新哪些参数。","index":17},{"id":"ssl-mae-experiments","title":"MAE 消融与比较","topic":"traditional","intro":"控制变量，检查掩码模式、解码器与模型规模分别带来什么变化。","index":18},{"id":"ssl-mae-visualizations","title":"高掩码率重建可视化","topic":"traditional","intro":"极少可见内容下的预测具有不确定性，观察结构与细节怎样变化。","index":19},{"id":"ssl-traditional-summary","title":"传统任务的收获与局限","topic":"traditional","intro":"空间、变换、通道和时间都能产生信号，专门设计任务也有成本。","index":20},{"id":"ssl-positive-negative","title":"从变换一致性到正负对","topic":"modern","intro":"同图多种视图共享来源身份，可用这层关系定义统一目标。","index":21},{"id":"ssl-infonce","title":"InfoNCE：从候选中找正样本","topic":"modern","intro":"先定义对象与评分，再把相似度转成候选概率和优化目标。","index":22},{"id":"ssl-simclr","title":"SimCLR：增强、编码与投影","topic":"modern","intro":"用同一输入的两次随机增强形成正对，在投影空间进行对比。","index":23},{"id":"ssl-simclr-batch","title":"SimCLR 批内配对与平均损失","topic":"modern","intro":"每张原图产生两个视图，每个视图轮流成为锚点。","index":24},{"id":"ssl-simclr-experiments","title":"SimCLR 实验与设计取舍","topic":"modern","intro":"区分评价协议，再用消融解释投影头与大批量。","index":25},{"id":"ssl-moco","title":"MoCo：队列与动量编码器","topic":"modern","intro":"保存历史键扩大负样本字典，同时保持历史特征相对一致。","index":26},{"id":"ssl-moco-v2","title":"MoCo v2：融合设计与实验条件","topic":"modern","intro":"增强与投影头可用于动量框架，性能与资源需要分别比较。","index":27},{"id":"ssl-dino","title":"DINO：无标签多视图蒸馏","topic":"modern","intro":"缓慢更新的教师提供目标，学生匹配同图其他视图的输出分布。","index":28},{"id":"ssl-dino-collapse","title":"中心化、锐化与教师更新","topic":"modern","intro":"没有显式负样本时，多个机制共同避免无信息的恒定输出。","index":29},{"id":"ssl-dinov2","title":"DINOv2：规模化通用视觉特征","topic":"modern","intro":"数据质量、模型规模与图像/块级目标共同影响冻结特征的通用性。","index":30},{"id":"ssl-summary","title":"回顾：信号、表征与评价","topic":"modern","intro":"用同一学习链路理解不同方法生成的监督与留下的能力。","index":31}],"slides":[{"id":"course-route","title":"自监督学习：由数据产生训练信号","caption":"动机与评估 → 传统代理任务 → 现代方法","note":"自监督学习（Self-supervised Learning，SSL）利用数据自身的结构、变换或不同视图构造目标，学习可复用的表征（representation）。","equations":[],"section":"ssl-visual-tasks","topic":"introduction","page":1},{"id":"imagenet","title":"ImageNet：规模化标注的推动作用","caption":"1000 类图像分类与历史竞赛结果","note":"ImageNet 大规模视觉识别挑战赛（ILSVRC）提供统一的图像类别与评价基准。历史图以分类错误率为纵轴，越低越好。","equations":[],"section":"ssl-visual-tasks","topic":"introduction","page":2},{"id":"visual-tasks","title":"四种视觉任务，需要四种输出","caption":"分类、语义分割、检测、实例分割","note":"图像分类（image classification）给整图类别；语义分割（semantic segmentation）给像素类别；目标检测（object detection）给框与类别；实例分割（instance segmentation）还区分同类的不同对象。","equations":[],"section":"ssl-visual-tasks","topic":"introduction","page":3},{"id":"label-bottleneck","title":"目标标注有限，怎样学习？","caption":"数据 → 目标与模型 → 训练 → 部署","note":"为任务收集带标注数据，选择网络与训练目标，再训练并部署，是常见监督学习路径。数据质量、覆盖范围和学习目标共同影响模型。","equations":[],"section":"ssl-visual-tasks","topic":"introduction","page":4},{"id":"transfer","title":"先学特征，再适配目标任务","caption":"从头训练与迁移学习","note":"迁移学习（transfer learning）先在源数据学习编码器，再用小目标数据集训练新任务头。编码器把图像转为特征向量，任务头给出类别等输出。","equations":[],"section":"ssl-transfer","topic":"introduction","page":5},{"id":"transfer-evidence","title":"分类改进可能惠及下游任务","caption":"分类错误率与 COCO 检测表现","note":"左图观察分类错误率下降，右图观察 COCO 检测指标提高。两组图展示各自趋势，模型没有一一配对关系。","equations":[],"section":"ssl-transfer","topic":"introduction","page":6},{"id":"representation-cost","title":"源任务的标注成本仍然存在","caption":"图像 → 特征 → 人工类别标签","note":"迁移减少目标标签需求，监督预训练仍靠源任务人工标签塑造特征。下一步把问题转向编码器本身的学习方式。","equations":[],"section":"ssl-transfer","topic":"introduction","page":7},{"id":"observation","title":"观察、交互和多模态信息提供线索","caption":"少量明确监督，大量自然经验","note":"Hinton、LeCun 和 Bengio 对无监督学习、先学表征和适应变化的讨论，共同指向减少人工标签依赖。人类婴儿从观察、操作、视觉、声音和触觉积累经验。","equations":[],"section":"ssl-observation","topic":"introduction","page":8},{"id":"ssl-benefits","title":"自动构造目标，扩大可用数据","caption":"标注成本、可扩展性与迁移能力","note":"监督目标来自外部人工标签，自监督目标从数据生成。自动构造目标降低标签收集成本，使更大规模未标注数据可参与训练。","equations":[],"section":"ssl-observation","topic":"introduction","page":9},{"id":"pretext","title":"代理任务：从数据产生答案","caption":"未标注数据 → 编码器 → 代理头","note":"代理任务（pretext task）为学习表征而设计。隐藏图像区域后预测缺失内容，或施加已知旋转后预测角度，都能由原数据自动产生答案。","equations":[],"section":"ssl-pretext","topic":"introduction","page":10},{"id":"downstream","title":"下游任务：复用编码器，换输出头","caption":"表征 → 应用所需的类别或区域","note":"下游任务（downstream task）是实际关心的应用。预训练后保留编码器，替换代理头，用目标数据训练类别、检测或分割输出。","equations":[],"section":"ssl-pretext","topic":"introduction","page":11},{"id":"pretext-examples","title":"同一图像的四种代理任务","caption":"补全、旋转、拼图与着色","note":"四个猫图示例分别利用缺失内容、已知角度、块排列和原颜色。补全与着色的目标来自原图，旋转与排列目标由操作记录。","equations":[],"section":"ssl-pretext","topic":"introduction","page":12},{"id":"evaluation","title":"冻结编码器，训练线性分类器","caption":"线性探测与无微调迁移","note":"线性探测（linear probing）冻结编码器，只用带标签数据训练线性头，检查特征的可分性。它仍使用目标训练标签。","equations":[],"section":"ssl-evaluation","topic":"introduction","page":13},{"id":"rotation-transfer","title":"从旋转角度迁移到鸟类别","caption":"未标注预训练 → 少量标签适配 → 评价","note":"先从大量未标注图像构造旋转标签，训练特征提取器；随后连接浅层分类器，用少量带标签目标数据学习鸟类别。","equations":[],"section":"ssl-evaluation","topic":"introduction","page":14},{"id":"scope","title":"视觉、语言、语音与机器人","caption":"本讲重点：视觉表征","note":"语言有上下文，语音有时间依赖，机器人观察有空间与交互结构。不同模态都可以从原数据构造目标。","equations":[],"section":"ssl-scope","topic":"introduction","page":15},{"id":"relative-patches","title":"中心猫块与八个邻域位置","caption":"两个输入块，八路位置标签","note":"上下文预测（context prediction）选中心块，再从八个周边方向采样一块，预测相对位置。猫图输入中心脸部与右上耳部，标签 Y=3。","equations":[],"section":"ssl-relative-position","topic":"traditional","page":16},{"id":"relative-neighbors","title":"最近邻是否反映对象内容？","caption":"随机初始化、监督 AlexNet、自监督特征","note":"最近邻（nearest neighbors）检索比较查询块在不同特征空间中的邻居。观察部件、结构与内容相似性，随机初始化作为基线。","equations":[],"section":"ssl-relative-position","topic":"traditional","page":17},{"id":"relative-detection","title":"在 VOC 2007 检验检测迁移","caption":"从头训练、自监督与监督预训练","note":"检测表包含各类结果与 mAP（mean average precision，平均精度均值）。相同结构和协议下，自监督预训练改善了从头训练结果，监督预训练仍是重要参考。","equations":[],"section":"ssl-relative-position","topic":"traditional","page":18},{"id":"jigsaw-task","title":"打乱图像块，预测排列","caption":"虎图：局部外观与整体结构","note":"拼图（jigsaw puzzle）任务把图像分块后打乱，让网络识别排列。虎图依次显示原图、分块和重排，目标由操作自动记录。","equations":[],"section":"ssl-jigsaw","topic":"traditional","page":19},{"id":"jigsaw-permutation","title":"汽车例子：第 64 号排列","caption":"225×225 → 3×3 → 九个 64×64 块","note":"从 225×225 窗口建立 3×3 网格，每个 75×75 单元随机取 64×64 块，再选预定义排列。示例标签是排列编号 64。","equations":[],"section":"ssl-jigsaw","topic":"traditional","page":20},{"id":"jigsaw-transfer","title":"在分类、检测与分割中检验特征","caption":"Pascal VOC 下游结果","note":"拼图方法报告分类 67.6%、检测 53.2%、分割 37.6%，与相对位置等预训练比较。每列对应不同任务指标。","equations":[],"section":"ssl-jigsaw","topic":"traditional","page":21},{"id":"rotation-intuition","title":"自然朝向提供结构线索","caption":"观察对象形态，再判断旋转","note":"旋转预测（rotation prediction）可能要求认识对象通常的形态与朝向。代理输出要区分旋转，不能把它描述为输出对旋转不变。","equations":[],"section":"ssl-rotation","topic":"traditional","page":22},{"id":"rotation-four-way","title":"四种角度，四路分类","caption":"0°、90°、180°、270°","note":"同一鸟图旋转为四种输入，共享网络预测施加的角度。目标由变换程序生成，四分类交叉熵更新编码器与角度头。","equations":[],"section":"ssl-rotation","topic":"traditional","page":23},{"id":"rotation-cifar","title":"CIFAR-10 的标签数量与表现","caption":"冻结 conv1/2，训练 conv3 与线性层","note":"先在完整 CIFAR-10 训练图像上旋转预训练，再冻结 conv1、conv2，用不同规模标签子集训练 conv3 与线性层。横轴为每类标签数，纵轴为测试准确率。","equations":[],"section":"ssl-rotation","topic":"traditional","page":24},{"id":"rotation-voc","title":"ImageNet 预训练，VOC 标签适配","caption":"分类、检测与分割的迁移","note":"ImageNet 全训练图像用于旋转预训练，Pascal VOC 2007 标签用于适配。表中旋转方法一组结果为分类 70.87、检测 54.4、分割 39.1。","equations":[],"section":"ssl-rotation","topic":"traditional","page":25},{"id":"color-task","title":"灰度输入，颜色输出","caption":"图像自身提供着色目标","note":"图像着色（image colorization）用亮度信息预测原图颜色。虎图经过表征网络得到颜色输出，任务可能需要局部纹理与更大范围结构。","equations":[],"section":"ssl-colorization","topic":"traditional","page":26},{"id":"lab-channels","title":"Lab：亮度与颜色分开","caption":"L 一个通道，ab 两个通道","note":"Lab 色彩空间（Lab color space）分离亮度 L 与色度 a、b。H×W 图像中，L 为 H×W×1，ab 为 H×W×2。","equations":[],"section":"ssl-colorization","topic":"traditional","page":27},{"id":"split-brain","title":"两个子网络，互相预测通道","caption":"X₁ → X₂；X₂ → X₁","note":"双分支自编码器（Split-brain Autoencoder）把输入分为 X₁、X₂；F₁ 从 X₁ 预测 X₂，F₂ 从 X₂ 预测 X₁，中间特征可拼接。","equations":[],"section":"ssl-split-brain","topic":"traditional","page":28},{"id":"split-transfer","title":"在 Places 评价拼接特征","caption":"ImageNet 自监督 → Places 场景分类","note":"ImageNet 全训练集用于自监督，F₁/F₂ 特征拼接后在带标签 Places 数据上评价。横轴是网络层，纵轴是 Top-1 准确率。","equations":[],"section":"ssl-split-brain","topic":"traditional","page":29},{"id":"color-results","title":"观察真实着色结果","caption":"灰度、原颜色与预测颜色","note":"对比人物、食物、动物与场景中的结构边界和颜色合理性。颜色预测与真实颜色可能不同，不能据清晰结果直接断言识别能力。","equations":[],"section":"ssl-split-brain","topic":"traditional","page":30},{"id":"video-reference","title":"从参考帧给后续灰度帧着色","caption":"同一区域随时间移动","note":"视频着色（video colorization）给定参考彩色帧和目标灰度帧，预测目标颜色。t=0 参考帧提供颜色，t=1、2、3 目标帧提供待匹配内容。","equations":[],"section":"ssl-video-coherence","topic":"traditional","page":31},{"id":"video-pointer","title":"先学习映射，再复制颜色","caption":"特征空间的软指针","note":"共享编码器从灰度帧提取特征，比较目标与参考位置，匹配权重作为软指针读取参考颜色。颜色流向由参考帧到目标帧。","equations":[],"section":"ssl-video-coherence","topic":"traditional","page":32},{"id":"video-matching","title":"目标位置 j 查询参考位置 i","caption":"点积，沿参考位置归一化","note":"参考帧有 R 个位置、目标帧有 T 个位置，两侧特征均为 d 维。固定目标 j，对参考位置 i 打分并归一化。","equations":[{"tex":"A_{ij}=\\frac{\\exp(f_i^\\top f_j)}{\\sum_{k=1}^{R}\\exp(f_k^\\top f_j)},\\qquad \\sum_{i=1}^{R}A_{ij}=1","explanation":"A 为 R×T，i、k 是参考位置，j 是目标位置。固定 j 沿 i 归一化，每列和为 1；越大权重表示更倾向读取该参考位置。"}],"section":"ssl-video-computation","topic":"traditional","page":33},{"id":"video-weighted-color","title":"按匹配权重读取参考颜色","caption":"颜色预测是参考颜色的加权和","note":"每个参考位置提供颜色 cᵢ，同一组权重 Aᵢⱼ汇总成目标预测 yⱼ。若用 ab 颜色则输出二维；量化颜色也可表示为类别分布。","equations":[{"tex":"y_j=\\sum_{i=1}^{R}A_{ij}c_i","explanation":"固定目标 j，i 遍历参考位置。权重和为 1，输出为参考颜色的凸组合；目标真值没有参与读取。"}],"section":"ssl-video-computation","topic":"traditional","page":34},{"id":"video-color-loss","title":"与目标帧真实颜色比较","caption":"误差经匹配权重更新编码器","note":"原彩色视频目标帧提供真值 cⱼ。颜色预测损失经加权汇总与匹配权重传回编码器，推动特征建立准确对应。","equations":[{"tex":"\\min_\\theta\\ \\mathbb{E}[\\sum_{j=1}^{T}\\mathcal{L}_{\\mathrm{color}}(y_j,c_j)]","explanation":"θ 是共享编码器参数，遍历目标位置并对训练采样求平均；颜色分布可用交叉熵，损失须与输出表示一致。"}],"section":"ssl-video-computation","topic":"traditional","page":35},{"id":"video-results","title":"参考颜色、灰度与预测颜色","caption":"第一组：人物移动与颜色传播","note":"比较参考彩色帧、目标灰度帧和预测结果，观察人物移动后颜色保持及边界误差。","equations":[],"section":"ssl-video-transfer","topic":"traditional","page":36},{"id":"video-results-second","title":"颜色传播在另一段视频中怎样表现？","caption":"第二组：黄色服装与人物轮廓","note":"另一组视频展示穿黄色服装的人物。比较目标灰度帧与预测颜色，观察衣服颜色、轮廓和背景是否保持。","equations":[],"section":"ssl-video-transfer","topic":"traditional","page":37},{"id":"video-segmentation","title":"把参考掩码传播到对象区域","caption":"同一匹配读取区域标签","note":"图中高亮表示区域身份。参考帧给定区域掩码后，用学到的权重传到目标帧，检验对象对应是否保持。","equations":[],"section":"ssl-video-transfer","topic":"traditional","page":38},{"id":"video-keypoints","title":"传播姿态关键点","caption":"从区域信息到位置标记","note":"姿态关键点（pose keypoints）标记关节位置。红色连接保留三个真实人物例子，用来检验位置关系传播。","equations":[],"section":"ssl-video-transfer","topic":"traditional","page":39},{"id":"inpainting","title":"可见上下文输入，缺失区域输出","caption":"Context Encoder 学习缺失区预测","note":"图像修复（inpainting）随机遮挡区域，上下文编码器（Context Encoder）读取可见信息，解码器预测缺失内容，原图提供目标。","equations":[],"section":"ssl-inpainting","topic":"traditional","page":40},{"id":"inpainting-loss","title":"重建与对抗学习各自约束什么？","caption":"缺失区误差与真假区分","note":"二值掩码 M=1 表示缺失，输入为 (1−M)⊙x。生成器 F 预测，判别器 D 区分真实与重建；两者更新方向不同。","equations":[{"tex":"\\mathcal{L}_{\\mathrm{rec}}=\\|M\\odot[x-F((1-M)\\odot x)]\\|_2^2","explanation":"x、M 与重建采用相同像素形状；⊙ 是逐元素相乘。只比较缺失区域，L2 平方衡量像素差异。"},{"tex":"\\begin{aligned}\\min_F\\max_D\\ &\\lambda_r\\mathbb{E}[\\mathcal{L}_{\\mathrm{rec}}]\\cr &+\\lambda_a\\mathbb{E}[\\log D(x)+\\log(1-D(F((1-M)\\odot x)))]\\end{aligned}","explanation":"λr、λa 是非负权重。D 最大化真假区分目标，F 最小化重建及对抗目标；实际判别区域须与实现一致。"}],"section":"ssl-inpainting","topic":"traditional","page":41},{"id":"inpainting-results","title":"同一窗户的四种结果","caption":"输入、重建、对抗、联合目标","note":"固定输入与遮挡区域，观察仅重建较平滑、仅对抗可能有纹理但内容不准、联合目标协调结构与视觉合理性。","equations":[],"section":"ssl-inpainting","topic":"traditional","page":42},{"id":"inpainting-transfer","title":"检验分类、检测与分割用途","caption":"ImageNet → VOC 2007 / VOC 2012","note":"ImageNet 训练图像用于预训练，VOC 2007 用于分类、检测，VOC 2012 用于语义分割。方法对应报告 56.5%、44.5%、30.0%。","equations":[],"section":"ssl-inpainting","topic":"traditional","page":43},{"id":"mae-reconstruction","title":"保留少量块，重建图像","caption":"50% 与 75% 掩码率的猫图","note":"掩码自编码器（Masked Autoencoder，MAE）由少量可见块预测被遮挡像素。每行依次为掩码输入、重建、重建与可见内容合成、原图。","equations":[],"section":"ssl-mae","topic":"traditional","page":44},{"id":"mae-masking","title":"随机掩码 75% 的块","caption":"位置固定，保留 25% 可见块","note":"与视觉 Transformer（Vision Transformer，ViT）相同，图像分成不重叠 P×P 块。均匀随机掩码约 75%，只保留 25%。","equations":[],"section":"ssl-mae","topic":"traditional","page":45},{"id":"mae-encoder","title":"大编码器只处理可见块","caption":"投影 + 原位置编码 → Transformer","note":"可见块展平、线性投影并加入原位置编码，形成约 N/4 个 token 的序列进入编码器；编码器不接收 mask token。","equations":[],"section":"ssl-mae","topic":"traditional","page":46},{"id":"mae-decoder","title":"补回掩码位置，交给轻解码器","caption":"可见表征 + 共享 mask token + 位置编码","note":"把可见表征投影到解码维度，在缺失位置插入共享可学习掩码 token（mask token），按原位置还原完整 N 块序列，再加入位置编码。","equations":[],"section":"ssl-mae","topic":"traditional","page":47},{"id":"mae-loss","title":"只在缺失块计算 MSE","caption":"可见块供条件，掩码块供目标","note":"均方误差（mean squared error，MSE）只比较被掩码块的预测与真值，使监督聚焦必须推断的部分。","equations":[{"tex":"\\mathcal{L}_{\\mathrm{MAE}}=\\frac{1}{|\\mathcal{M}|P^2C}\\sum_{p\\in\\mathcal{M}}\\|\\hat{x}_p-x_p\\|_2^2","explanation":"𝓜 是固定掩码集合，C 是通道数，xp 与预测均为 P²C 维；|𝓜|>0。若使用逐块归一化目标，预测与目标要采用相同尺度。"}],"section":"ssl-mae","topic":"traditional","page":48},{"id":"probing-finetuning","title":"固定表征的质量与适配潜力","caption":"冻结编码器 / 联合更新编码器","note":"线性探测只训练线性头，衡量固定特征在受限读出条件下的可分性。全模型微调（full fine-tuning）更新编码器和任务头，衡量适配后的表现。","equations":[],"section":"ssl-probing-finetuning","topic":"traditional","page":49},{"id":"mae-mask-ablation","title":"掩码比例与空间采样","caption":"随机、连续块、网格；ft / lin","note":"消融实验（ablation study）改变设计项来识别贡献。随机 75% 掩码报告 ft 84.9、lin 73.5；连续块 75% 为 82.8、63.9；网格 75% 为 84.0、66.0。","equations":[],"section":"ssl-mae-experiments","topic":"traditional","page":50},{"id":"mae-decoder-ablation","title":"解码深度与宽度影响评价","caption":"轻解码器足够，最佳值依协议","note":"深度表 1–12 块的 ft 约为 84.4–84.9，lin 更敏感；8 块的 lin 为 73.5。宽度表 128–1024 维中，512 维的 lin 为 73.5。","equations":[],"section":"ssl-mae-experiments","topic":"traditional","page":51},{"id":"mae-comparison","title":"比较方法时同时读数据与规模","caption":"ViT-B / L / H 与输入分辨率","note":"MAE 微调结果为 ViT-B 83.6、L 85.9、H 86.9、H448 87.8。模型和分辨率均影响结果。","equations":[],"section":"ssl-mae-experiments","topic":"traditional","page":52},{"id":"mae-extreme","title":"98% 与 95% 掩码重建","caption":"第一组：夜间人物与网球运动","note":"五列依次为原图、98% 掩码输入、98% 输出、95% 掩码输入、95% 输出。夜间人物和网球场中，可见块增加后轮廓与场景有所改善。","equations":[],"section":"ssl-mae-visualizations","topic":"traditional","page":53},{"id":"mae-extreme-water","title":"高掩码率下的动作与水面","caption":"第二组：人物与水上运动","note":"继续按相同五列观察人物姿态、水面和帆板。极少可见块可提示较大场景结构，细节与真实图像仍可能不同。","equations":[],"section":"ssl-mae-visualizations","topic":"traditional","page":54},{"id":"mae-extreme-subjects","title":"人物与犬：轮廓和细节的差别","caption":"第三组：背景结构与对象外观","note":"人物和犬分别构成两行，原图与两种掩码输入/输出保持对应。场景轮廓可以恢复，面部、毛发等细节仍可能模糊。","equations":[],"section":"ssl-mae-visualizations","topic":"traditional","page":55},{"id":"traditional-summary","title":"关注留下的特征与迁移用途","caption":"视觉常识 → 表征 → 下游评价","note":"旋转、拼图、着色和修复偏重不同结构。代理任务做得好，还需要检查分类、检测与分割表现。","equations":[],"section":"ssl-traditional-summary","topic":"traditional","page":56},{"id":"contrastive-pairs","title":"同图拉近，异图保持区分","caption":"锚点 x、正样本 x⁺、负样本 x⁻","note":"对比表征学习（contrastive representation learning）把同一原图的另一视图作为正对（positive pair），其他图像作为负对（negative pair）。","equations":[],"section":"ssl-positive-negative","topic":"modern","page":57},{"id":"contrastive-score","title":"正对得分高，负对得分低","caption":"编码器 f 与评分函数 s","note":"编码器 f 把输入映射成向量，评分函数 s 比较两向量。希望正对分数相对负对更高，原始分数还不是概率。","equations":[],"section":"ssl-infonce","topic":"modern","page":58},{"id":"infonce-probability","title":"一个正样本与 N−1 个负样本","caption":"分子为正对，分母为所有候选","note":"固定锚点 x，将正样本与 N−1 个负样本的分数指数化并归一化，得到正候选被选中的概率。","equations":[{"tex":"p_+=\\frac{\\exp(s_+)}{\\exp(s_+)+\\sum_{j=1}^{N-1}\\exp(s_j^-)}","explanation":"s+ 为正对分数，sj− 为第 j 个负对分数；N≥2 为含正样本的候选总数，锚点不属于候选。正项也在分母中，p+ 在 0 与 1 之间。"}],"section":"ssl-infonce","topic":"modern","page":59},{"id":"infonce-cross-entropy","title":"负对数概率就是交叉熵","caption":"N 路分类：正样本的位置是标签","note":"InfoNCE（信息噪声对比估计损失）把识别正样本写为 N 路分类，目标类别是正样本在列表中的位置，来自视图配对关系。","equations":[{"tex":"\\mathcal{L}_N=-\\mathbb{E}[\\log p_+]","explanation":"期望遍历锚点及正负采样；自然对数下以 nat 计。p+ 越大损失越小，均匀候选概率 1/N 对应 log N。"}],"section":"ssl-infonce","topic":"modern","page":60},{"id":"infonce-mi","title":"互信息下界需要抽样条件","caption":"I ≥ log N − 𝓛N","note":"标准推导中正样本来自联合关系，负样本独立从边缘分布抽样；下界是 log N 减损失，损失本身不是互信息下界。","equations":[{"tex":"I(f(x);f(x^+))\\geq\\log N-\\mathcal{L}_N","explanation":"I 是互信息。增加 N 可提高下界可表达的上限，实际训练效果依评分、采样和优化；更多候选不保证每个设置都更好。"}],"section":"ssl-infonce","topic":"modern","page":61},{"id":"simclr-framework","title":"共享编码器，两种随机视图","caption":"x → t / t′ → f → h → g → z","note":"SimCLR（A Simple Framework for Contrastive Learning）采样两种增强 t、t′，共享编码器 f 输出表征 h，投影头 g 输出对比向量 z，下游通常保留 h。","equations":[{"tex":"\\operatorname{sim}(u,v)=\\frac{u^\\top v}{\\|u\\|_2\\|v\\|_2}","explanation":"u、v 是同维非零向量，余弦在 −1 到 1 之间。实现需避免零范数；温度 τ>0 控制相似度进入 Softmax 的尺度。"}],"section":"ssl-simclr","topic":"modern","page":62},{"id":"simclr-augmentation","title":"增强定义要保留哪些信息","caption":"随机裁剪、颜色扰动与模糊","note":"数据增强（data augmentation）生成不同外观的同源视图。图中展示裁剪、翻转、颜色、灰度、旋转、遮挡、噪声、模糊和边缘等选项。","equations":[],"section":"ssl-simclr","topic":"modern","page":63},{"id":"simclr-batch","title":"B 张原图，2B 个视图","caption":"排除自身，一正与 2B−2 个负样本","note":"固定锚点 i，同源另一视图 j 为正样本，其余 2B−2 个视图为负样本。分母排除自身，却必须包含正样本。","equations":[{"tex":"\\ell_{i,j}=-\\log\\frac{\\exp(\\operatorname{sim}(z_i,z_j)/\\tau)}{\\sum_{k=1}^{2B}\\mathbf{1}_{k\\ne i}\\exp(\\operatorname{sim}(z_i,z_k)/\\tau)}","explanation":"B≥2 是原图批量，τ>0 是温度，zi 为投影向量；分母含 2B−1 个候选。这里 B 与上一节候选总数 N 不同。"},{"tex":"\\mathcal{L}=\\frac{1}{2B}\\sum_{b=1}^{B}(\\ell_{2b-1,2b}+\\ell_{2b,2b-1})","explanation":"用一基索引，(1,2)、(3,4)…共享原图。两个方向分别作锚点，对 2B 个损失项平均。"}],"section":"ssl-simclr-batch","topic":"modern","page":64},{"id":"simclr-affinity","title":"亲和矩阵：每行标签的位置","caption":"对角线排除，正对在相邻列","note":"将投影向量组成 Z∈ℝ^(2B×d)，两两相似度得到 2B×2B 亲和矩阵（affinity matrix）。行表示锚点，对角线为自身比较。","equations":[],"section":"ssl-simclr-batch","topic":"modern","page":65},{"id":"simclr-linear","title":"冻结编码器评价线性分类","caption":"ImageNet 特征与带标签线性探测","note":"ImageNet 全训练集用于自监督，冻结特征后训练线性分类器。横轴是参数量，纵轴是 Top-1 准确率，灰色标记为监督基准。","equations":[],"section":"ssl-simclr-experiments","topic":"modern","page":66},{"id":"simclr-few-labels","title":"1% / 10% 标签用于微调","caption":"允许编码器更新的少标签适配","note":"半监督适配（semi-supervised adaptation）先利用全部训练图像预训练，再用 1% 或 10% 类别标签微调。表中指标为 Top-5。","equations":[],"section":"ssl-simclr-experiments","topic":"modern","page":67},{"id":"simclr-projection","title":"h 与 z 承担不同职责","caption":"表征空间与对比投影空间","note":"对比要求 z 对增强保持一致，可能丢弃颜色等信息。投影头将 h 与 z 分开，使 h 保留更多下游有用信息。","equations":[],"section":"ssl-simclr-experiments","topic":"modern","page":68},{"id":"simclr-large-batch","title":"更多负样本与更大内存占用","caption":"批量和训练轮次共同影响表现","note":"当前批次提供负样本，扩大 B 增加候选。曲线比较 batch 256–8192 与不同训练轮次；大批量也需要保存更多反传激活。","equations":[],"section":"ssl-simclr-experiments","topic":"modern","page":69},{"id":"moco-queue","title":"查询反传，历史键保留在队列","caption":"查询 fᵩ 与动量键 fₖ","note":"动量对比学习（Momentum Contrast，MoCo）用查询编码器生成 q，键编码器生成同图另一增强的正键 k⁺，历史队列键作为负样本。","equations":[],"section":"ssl-moco","topic":"modern","page":70},{"id":"moco-momentum","title":"键编码器缓慢追随查询编码器","caption":"EMA 保持历史字典一致性","note":"查询参数 θq 由优化器更新，键参数 θk 通过指数移动平均（exponential moving average，EMA）变化，减少新旧键特征空间的不一致。","equations":[{"tex":"\\theta_k\\leftarrow m\\theta_k+(1-m)\\theta_q","explanation":"两侧对应参数形状一致，0≤m\u003c1；m 越接近 1，键编码器保留越多历史状态，更新越慢。"}],"section":"ssl-moco","topic":"modern","page":71},{"id":"moco-fifo","title":"先计算损失，再维护 FIFO 队列","caption":"新键入队，最旧键出队","note":"先进先出（first in, first out，FIFO）队列保存固定数量历史键。当前查询先用旧队列算损失，新批次键随后入队，删除最旧键。","equations":[],"section":"ssl-moco","topic":"modern","page":72},{"id":"moco-v2-design","title":"非线性投影头与强增强","caption":"SimCLR 设计 + MoCo 队列","note":"MoCo v2 把非线性投影头、强增强和改进训练计划结合到动量队列。表中在 ResNet-50、200 轮条件下逐项加入设计。","equations":[],"section":"ssl-moco-v2","topic":"modern","page":73},{"id":"moco-v2-performance","title":"小批量也能使用大负样本字典","caption":"batch 256 与 8192 的比较","note":"在 ResNet-50、200 轮设置中，MoCo v2 batch256 的线性准确率 67.5，SimCLR batch8192 为 66.6。队列解除了批量与负样本数量的绑定。","equations":[],"section":"ssl-moco-v2","topic":"modern","page":74},{"id":"moco-memory","title":"显存与训练时间是不同指标","caption":"给定硬件与轮次下的资源表","note":"在 8 张 V100、200 轮估计中，MoCo batch256 为每 GPU 5.0G / 53h，end-to-end batch256 为 7.4G / 65h，batch4096 为 93.0G 且未给时间。","equations":[],"section":"ssl-moco-v2","topic":"modern","page":75},{"id":"dino-evidence","title":"自监督 ViT 的空间关注","caption":"实际对象与注意力区域配对","note":"DINO（Self-Distillation with No Labels，无标签自蒸馏）训练同图视图一致性。图中输入与关注区域展示与对象边界相关的结构。","equations":[],"section":"ssl-dino","topic":"modern","page":76},{"id":"dino-views","title":"两个全局与多个局部视图","caption":"教师仅全局，学生全局与局部","note":"多裁剪（multi-crop）从同图生成两全局与多个局部视图。原 DINO 默认面积比例为全局 0.4–1.0、局部 0.05–0.4，缩放尺寸分别 224×224 与 96×96。","equations":[],"section":"ssl-dino","topic":"modern","page":77},{"id":"dino-objective","title":"跨视图匹配教师原型分布","caption":"排除同一视图，等权平均有效配对","note":"投影头输出 K 维原型分数，再转成分布。原型没有人工类别名称；两全局加八局部时，两教师各匹配九个学生视图，共 18 项。","equations":[{"tex":"\\mathcal{L}_{\\mathrm{DINO}}=\\frac{1}{|\\mathcal{P}|}\\sum_{(u,v)\\in\\mathcal{P}}-\\sum_{k=1}^{K}p_t^{(k)}(u)\\log p_s^{(k)}(v)","explanation":"𝓟 是教师全局 u 与同图其他学生 v 的配对，排除同一视图。pt、ps 为 K 维概率向量、各自和为 1；pt 停止梯度，只更新学生。原方法对有效项等权平均。"}],"section":"ssl-dino","topic":"modern","page":78},{"id":"dino-centering","title":"中心化抑制单一原型主导","caption":"教师 logits 减去逐维移动中心","note":"中心化（centering）维护教师原型分数的逐维 EMA。减去中心 c 降低某一原型长期占主导的倾向，c 是向量而非单一标量。","equations":[{"tex":"p_t=\\operatorname{softmax}((z_t-c)/\\tau_t)","explanation":"zt、c 为 K 维原型 logits；τt>0 是教师温度，输出各维概率和为 1。"},{"tex":"c\\leftarrow m_c c+(1-m_c)\\frac{1}{B_t}\\sum_{b=1}^{B_t}z_{t,b}","explanation":"Bt 是教师视图样本数量，0≤mc\u003c1。批均值来自原型 logits，中心更新不参与梯度。"}],"section":"ssl-dino-collapse","topic":"modern","page":79},{"id":"dino-sharpening","title":"低温度令教师分布更有区分度","caption":"教师 τt 低于学生 τs","note":"锐化（sharpening）用低教师温度放大分数差异，降低均匀输出的倾向；学生温度更高。中心化与锐化作用需要平衡。","equations":[{"tex":"p_s=\\operatorname{softmax}(z_s/\\tau_s),\\qquad 0\u003c\\tau_t\u003c\\tau_s","explanation":"zs 为学生 logits。温度控制相对分数尺度，低于 1 本身没有脱离 logits 尺度的绝对意义。"}],"section":"ssl-dino-collapse","topic":"modern","page":80},{"id":"dino-ema","title":"学生反传，教师通过 EMA 更新","caption":"预测 → 损失 → 学生更新 → 教师目标","note":"表征坍缩（representation collapse）是不同输入产生相同无信息输出，例如总用同一原型或均匀分布。停止教师梯度、中心化、锐化与 EMA 等共同稳定训练。","equations":[{"tex":"\\theta_t\\leftarrow\\lambda\\theta_t+(1-\\lambda)\\theta_s","explanation":"θt、θs 为对应教师与学生参数，0≤λ\u003c1。学生由梯度更新，再通过 EMA 更新教师，为下一轮生成较稳定目标。"}],"section":"ssl-dino-collapse","topic":"modern","page":81},{"id":"dinov2","title":"精选数据、大骨干与多层次目标","caption":"图像蒸馏 + 掩码块预测 + 特征正则","note":"DINOv2 使用精选去重的 LVD-142M 图像，约为 ImageNet-22k 1400 万图像的十倍，训练 ViT-g 大骨干并蒸馏小模型。","equations":[],"section":"ssl-dinov2","topic":"modern","page":82},{"id":"course-summary","title":"三个问题串起自监督学习","caption":"监督从哪里来？留下什么？怎样评价？","note":"传统任务用空间、变换、通道和时间；MAE 预测像素；SimCLR/MoCo 比较正负视图；DINO 匹配教师分布。它们都留下编码器与表征。","equations":[],"section":"ssl-summary","topic":"modern","page":83}],"topics":{"introduction":{"label":"动机与评估","target":"ssl-visual-tasks"},"traditional":{"label":"传统代理任务与 MAE","target":"ssl-relative-position"},"modern":{"label":"现代自监督学习","target":"ssl-positive-negative"}},"sequences":{"mae-masking":{"type":"mae","frames":[0,1],"steps":["原位置固定，共 16 个块。","隐藏固定的 12 块，保留 4 块。"]},"mae-encoder":{"type":"mae","frames":[1,2],"steps":["按原位置取出四个可见块。","只有四个块进入编码器，输出对应表征。"]},"mae-decoder":{"type":"mae","frames":[2,3,4],"steps":["保留四个编码表征。","在其余位置补同一共享 mask token。","完整位置序列进入轻解码器。"]},"mae-loss":{"type":"mae","frames":[4,5],"steps":["解码器预测各位置像素。","只在固定的十二个缺失位置计算误差。"]},"contrastive-pairs":{"type":"contrastive","frames":[0,1,2],"steps":["同一猫图的变换视图共享身份。","加入另一来源图像作为负样本。","表示中的正对拉近，负对保持区分。"]},"simclr-affinity":{"type":"affinity","frames":[0,1,2,3,4,5],"steps":["锚点 1：正列 2，自身列 1 排除。","锚点 2：正列 1，自身列 2 排除。","锚点 3：正列 4，自身列 3 排除。","锚点 4：正列 3，自身列 4 排除。","锚点 5：正列 6，自身列 5 排除。","锚点 6：正列 5，自身列 6 排除。"]},"moco-fifo":{"type":"fifo","frames":[0,1,2],"steps":["容量四：旧负键 K1、K2、K3、K4。","当前查询先与旧队列比较，新键 K5、K6 待入队。","新键入队，最旧 K1、K2 出队，留下 K3–K6。"]},"dino-ema":{"type":"dino","frames":[0,1,2,3],"steps":["同图视图进入学生与教师。","教师输出停止梯度，学生匹配目标分布。","损失梯度更新学生参数。","新学生参数以 EMA 更新教师，供下一轮使用。"]}}}</script><script src="script.js"></script><script src="vendor/katex/katex.min.js"></script><script src="self-supervised-learning.js?v=20261010-2"></script></body></html>
