@@ -1,0 +1,51 @@
+.gen-page .button svg, .gen-page [data-present-section] svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  vertical-align: middle;
+}
+.gen-page [data-present-section] { display: inline-flex; align-items: center; gap: 6px; }
+.gen-page .page-toc a { transition: color .16s ease; }
+.gen-page .gen-reading-step { margin-top: 26px; }
+.gen-page .gen-reading-step h3 { font-size: 20px; line-height: 1.6; margin-bottom: 12px; }
+.gen-page .gen-reading-step p { margin: 12px 0; line-height: 1.85; }
+.gen-page .intro-topic { border-radius: 0; }
+.gen-page .gen-figure-scroll { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.gen-page .tf-sequence-stage { aspect-ratio: 960 / 440; }
+.gen-page .cnn-equation { overflow-x: auto; padding: 18px 16px; margin: 20px 0 8px; background: #f3f7f4; border-left: 3px solid #426f91; }
+.gen-page .cnn-equation .katex-display { margin: 0; }
+.gen-page .gen-equation-explanation { color: #52665d; font-size: 14px; line-height: 1.8; }
+.gen-page .intro-slide-image { display: block; aspect-ratio: auto; height: auto; }
+.gen-page .intro-slide-image img { height: auto; object-fit: contain; }
+.gen-page .tf-sequence-stage { overflow-x: auto; }
+.gen-page #slide-sequence, .gen-page .tf-sequence, .gen-page .tf-sequence-stage { width: 100%; min-width: 0; max-width: 100%; }
+.gen-page .tf-sequence-caption { min-height: 48px; }
+.gen-page .intro-visual figcaption { color: #5d7469; font-size: 13px; line-height: 1.7; margin-top: 8px; }
+@media (max-width: 767px) {
+  .gen-page .gen-figure-scroll > a, .gen-page .tf-sequence-zoom { min-width: 650px; }
+  .gen-page .tf-sequence-stage { aspect-ratio: auto; height: 300px; }
+  .gen-page .tf-sequence-zoom { height: 300px; }
+  .gen-page .intro-slide-heading h2 { font-size: 22px; }
+  .gen-page .intro-slide-controls { gap: 8px; }
+  .gen-page .intro-slide-controls .button { padding-inline: 12px; }
+  .gen-page .intro-slide-controls .button svg { width: 15px; height: 15px; }
+  .gen-page .gen-reading-step h3 { font-size: 18px; }
+}
+
+.gen-page #slide-details p { line-height: 1.85; margin: 12px 0; }
+.gen-page .gen-paired-evidence { text-align: center; }
+.gen-page .gen-paired-evidence a { width: 100%; max-width: 360px; margin: 0 auto; }
+.gen-page .gen-paired-evidence img { display: block; width: 100%; height: auto; }
+.gen-page .gen-wide-evidence a { max-width: 654px; }
+.gen-page .gen-code { max-width: 100%; min-width: 0; margin: 20px 0; overflow-x: auto; background: #f3f6f4; border-left: 3px solid #306b87; }
+.gen-page .gen-code pre { margin: 0; padding: 18px; font-size: 14px; line-height: 1.8; white-space: pre; }
+.gen-page .page-footer > span:last-child { display: flex; flex-wrap: wrap; gap: 16px; }
+.gen-page .page-toc .gen-toc-part { margin: 0; padding: 0 0 18px; }
+.gen-page .page-toc .gen-toc-part + .gen-toc-part { padding-top: 18px; border-top: 1px solid var(--border); }
+.gen-page .page-toc .gen-toc-part-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 8px; color: #63766c; font: 600 12px var(--mono); letter-spacing: 0; }
+.gen-page .page-toc .gen-toc-part-title span { color: #315d4c; }
+.gen-page .page-toc .gen-toc-part-title small { color: #819388; font: 12px var(--sans); }
+.gen-page .page-toc .gen-topic-toc { margin: 0; padding: 0; }
+.gen-page .page-toc .gen-topic-toc a { color: #50685c; font-size: 13px; }
+.gen-page .page-toc .gen-toc-part .tf-section-toc { margin: 8px 0 0; padding: 0; }
+.gen-page .page-toc .gen-toc-part.selected .gen-toc-part-title span { color: var(--primary); }

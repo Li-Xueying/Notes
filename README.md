@@ -12,11 +12,11 @@
 
 | 页面 | 内容 |
 | --- | --- |
-| [课程概览](index.html) | 课程介绍、前五讲主题、考核方式与授课团队 |
-| [课程讲义](lectures.html) | 前五讲完整讲义目录，均提供阅读与演示模式 |
+| [课程概览](index.html) | 课程介绍、前六讲主题、考核方式与授课团队 |
+| [课程讲义](lectures.html) | 前六讲讲义目录，均提供阅读与演示模式 |
 | [下载课件](downloads.html) | PDF 课件的预览、下载与上传状态 |
 
-目前前五讲的 PDF 课件与在线讲义均已提供。
+前六讲在线讲义均已提供。生成模型 Part I、Part II 共用第六讲，两部分均提供阅读与演示内容，两份 PDF 可分别下载。
 
 ## 本地预览
 
@@ -40,7 +40,30 @@ python3 -m http.server 8080 --directory ai-engineering-course
 
 课程概览、讲义目录和课件目录分别位于 `index.html`、`lectures.html` 与 `downloads.html`；第一讲页面位于 `intro-overview.html`，其翻页逻辑位于 `intro-overview.js`。页面样式和通用交互逻辑分别位于 `styles.css` 与 `script.js`。
 
-前五讲均提供阅读模式与演示模式：`intro-overview.html`、`cnn-image-recognition.html`、`rnn-lstm-sequence-modeling.html`、`transformer-models.html` 与 `self-supervised-learning.html`。第四讲图解位于 `diagrams/transformer/`，正文、演示脚本和来源映射保存在 `AI工程学/.course-build/04-transformers/`。
+前六讲均提供阅读模式与演示模式：`intro-overview.html`、`cnn-image-recognition.html`、`rnn-lstm-sequence-modeling.html`、`transformer-models.html`、`self-supervised-learning.html` 与 `generative-models.html`。第四讲图解位于 `diagrams/transformer/`，正文、演示脚本和来源映射保存在 `AI工程学/.course-build/04-transformers/`。
+
+第六讲入口为 `generative-models.html`，覆盖 Part I 的 93 页和 Part II 的 100 页 PDF，共 43 个阅读小节、114 个演示步骤、7 组计算过程及 45 组原始图证。正文与公式分别维护于 `scripts/generative-part1-course-data.mjs`、`scripts/generative-part2-course-data.mjs`，由 `scripts/generative-course-data.mjs` 合并。Part I 的 47 个演示页和锚点保持稳定，Part II 从第 48 页开始。
+
+两种模式共用解释、公式、代码与计算状态。Part I 完整展开 ELBO；Part II 按 GAN 目标与交替更新、速度回归、Euler 采样、条件生成、CFG、广义扩散、图像与视频实例展开。新增四组序列分别展示 GAN 实际参数更新、固定端点插值、三步 Euler 与 CFG 向量组合。复杂论文图和实验表可点击打开完整原图。
+
+来源只有 PDF，使用 macOS PDFKit 提取文本与几何位置，并以 Vision 辅助索引嵌入图表；公式与图证经视觉核对。内部事实、教学审查、修正、覆盖及验收位于 `AI工程学/.course-build/06-generative/part1/` 和 `part2/`，路径相对于上一级工作区。原图和图解分别位于 `media/generative/{part1,part2}/`、`diagrams/generative/{part1,part2}/`。PDF 中无法恢复的视频仅保留实际可见静帧。
+
+在课程仓库根目录重建第六讲（Swift 脚本需要 macOS AppKit/PDFKit/Vision）：
+
+```sh
+swift -module-cache-path /private/tmp/generative-swift-module-cache scripts/extract-generative-facts.swift
+node scripts/prepare-generative-part1.mjs
+swift -module-cache-path /private/tmp/generative-swift-module-cache scripts/render-generative-part1-assets.swift
+node scripts/generate-generative-part1-diagrams.mjs
+node scripts/build-generative-part1-artifacts.mjs
+swift -module-cache-path /private/tmp/generative-swift-module-cache scripts/extract-generative-facts.swift part2
+node scripts/prepare-generative-part2.mjs
+swift -module-cache-path /private/tmp/generative-swift-module-cache scripts/render-generative-part1-assets.swift part2
+swift -module-cache-path /private/tmp/generative-swift-module-cache scripts/index-generative-part2-evidence.swift
+node scripts/generate-generative-part2-diagrams.mjs
+node scripts/build-generative-page.mjs
+node scripts/validate-generative-page.mjs
+```
 
 第五讲覆盖原文档全部 112 页，提供 31 个阅读小节、83 个演示步骤与 8 组分步过程。唯一正文维护入口是 `scripts/self-supervised-course-data.mjs`；阅读段落、公式、演示备注、图证和来源统一定义于该文件。逐页索引、教学覆盖、修正依据、派生正文与验收记录保存于 `AI工程学/.course-build/05-self-supervised/`。图解和原媒体分别位于 `diagrams/self-supervised/`、`media/self-supervised/`。
 
@@ -103,6 +126,8 @@ node ai-engineering-course/scripts/validate-rnn-page.mjs
 - `RNNs and LSTMs.pdf`
 - `Transformer Models.pdf`
 - `Self-supervised Learning.pdf`
+- `Part I-Generative.pdf`
+- `Part II-Generative.pdf`
 
 新增或更换课件时，请同步更新首页及下载页中的文件链接与上传状态。讲义发布后，请同步更新讲义目录及相应入口。
 
